@@ -1,12 +1,10 @@
-use std::convert::TryFrom;
-
 use solana_program::{
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
 };
 
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 #[derive(Debug, PartialEq)]
 pub struct VestingSchedule {
     pub release_time: u64,
