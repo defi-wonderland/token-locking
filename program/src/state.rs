@@ -47,7 +47,7 @@ impl Pack for VestingScheduleHeader {
             .map_err(|_| ProgramError::InvalidArgument)?;
         let mint_address = Pubkey::try_from(&src[32..64])
             .map_err(|_| ProgramError::InvalidArgument)?;
-            let is_initialized = src[64] == 1;
+        let is_initialized = src[64] == 1;
         Ok(Self {
             destination_address,
             mint_address,
