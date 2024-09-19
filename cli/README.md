@@ -80,18 +80,6 @@ info                                                            \
 --seed $SEED " | bash                                          
 ```
 
-Change owner:
-```bash
-echo "RUST_BACKTRACE=1 ./target/debug/vesting-contract-cli      \
---url https://api.devnet.solana.com                             \
---program_id $PROGRAM_ID                                        \
-change-destination                                              \
---seed $SEED                                                    \
---current_destination_owner ~/.config/solana/id_dest.json       \
---new_destination_token_address $ACCOUNT_TOKEN_NEW_DEST         \
---payer ~/.config/solana/id_owner.json" | bash                           
-```
-
 And unlock tokens according schedule:
 ```bash
 echo "RUST_BACKTRACE=1 ./target/debug/vesting-contract-cli      \

@@ -16,7 +16,7 @@ use spl_associated_token_account::{create_associated_token_account, get_associat
 use spl_token;
 use std::convert::TryInto;
 use token_vesting::{
-    instruction::{change_destination, create, init, unlock, Schedule},
+    instruction::{create, init, unlock, Schedule},
     state::{unpack_schedules, VestingScheduleHeader},
 };
 
@@ -143,52 +143,6 @@ fn command_unlock_svc(
 
     let recent_blockhash = rpc_client.get_recent_blockhash().unwrap().0;
     transaction.sign(&[&payer], recent_blockhash);
-
-    rpc_client.send_transaction(&transaction).unwrap();
-}
-
-fn command_change_destination(
-    rpc_client: RpcClient,
-    program_id: Pubkey,
-    destination_token_account_owner: Keypair,
-    opt_new_destination_account: Option<Pubkey>,
-    opt_new_destination_token_account: Option<Pubkey>,
-    vesting_seed: [u8; 32],
-    payer: Keypair,
-) {
-    // Find the non reversible public key for the vesting contract via the seed
-    let (vesting_pubkey, _) = Pubkey::find_program_address(&[&vesting_seed[..31]], &program_id);
-
-    let packed_state = rpc_client.get_account_data(&vesting_pubkey).unwrap();
-    let state_header =
-        VestingScheduleHeader::unpack(&packed_state[..VestingScheduleHeader::LEN]).unwrap();
-    let destination_token_pubkey = state_header.destination_address;
-
-    let new_destination_token_account = match opt_new_destination_token_account {
-        None => get_associated_token_address(
-            &opt_new_destination_account.unwrap(),
-            &state_header.mint_address,
-        ),
-        Some(new_destination_token_account) => new_destination_token_account,
-    };
-
-    let unlock_instruction = change_destination(
-        &program_id,
-        &vesting_pubkey,
-        &destination_token_account_owner.pubkey(),
-        &destination_token_pubkey,
-        &new_destination_token_account,
-        vesting_seed,
-    )
-    .unwrap();
-
-    let mut transaction = Transaction::new_with_payer(&[unlock_instruction], Some(&payer.pubkey()));
-
-    let recent_blockhash = rpc_client.get_recent_blockhash().unwrap().0;
-    transaction.sign(
-        &[&payer, &destination_token_account_owner],
-        recent_blockhash,
-    );
 
     rpc_client.send_transaction(&transaction).unwrap();
 }
@@ -445,66 +399,6 @@ fn main() {
                     ),
             )
         )
-        .subcommand(SubCommand::with_name("change-destination").about("Change the destination of a vesting contract")
-            .arg(
-                Arg::with_name("seed")
-                    .long("seed")
-                    .value_name("SEED")
-                    .validator(is_parsable::<String>)
-                    .takes_value(true)
-                    .help(
-                        "Specify the seed for the vesting contract.",
-                    ),
-            )
-            .arg(
-                Arg::with_name("current_destination_owner")
-                    .long("current_destination_owner")
-                    .value_name("KEYPAIR")
-                    .validator(is_keypair)
-                    .takes_value(true)
-                    .help(
-                        "Specify the current destination owner account keypair. \
-                        This may be a keypair file, the ASK keyword. \
-                        Defaults to the client keypair.",
-                    ),
-            )
-            .arg(
-                Arg::with_name("new_destination_address")
-                    .long("new_destination_address")
-                    .value_name("ADDRESS")
-                    .validator(is_pubkey)
-                    .takes_value(true)
-                    .help(
-                        "Specify the new destination (non-token) account address. \
-                        If specified, the vesting destination will be the associated \
-                        token account for the mint of the contract."
-                    ),
-            )
-            .arg(
-                Arg::with_name("new_destination_token_address")
-                    .long("new_destination_token_address")
-                    .value_name("ADDRESS")
-                    .validator(is_pubkey)
-                    .takes_value(true)
-                    .help(
-                        "Specify the new destination token account address. \
-                        If specified, this address will be used as a destination, \
-                        and overwrite the associated token account.",
-                    ),
-            )
-            .arg(
-                Arg::with_name("payer")
-                    .long("payer")
-                    .value_name("KEYPAIR")
-                    .validator(is_keypair)
-                    .takes_value(true)
-                    .help(
-                        "Specify the transaction fee payer account address. \
-                        This may be a keypair file, the ASK keyword. \
-                        Defaults to the client keypair.",
-                    ),
-            )
-        )
         .subcommand(SubCommand::with_name("info").about("Print information about a vesting contract")
             .arg(
                 Arg::with_name("seed")
@@ -628,24 +522,6 @@ fn main() {
             let vesting_seed = pubkey_of(arg_matches, "seed").unwrap().to_bytes();
             let payer_keypair = keypair_of(arg_matches, "payer").unwrap();
             command_unlock_svc(rpc_client, program_id, vesting_seed, payer_keypair)
-        }
-        ("change-destination", Some(arg_matches)) => {
-            let vesting_seed = pubkey_of(arg_matches, "seed").unwrap().to_bytes();
-            let destination_account_owner =
-                keypair_of(arg_matches, "current_destination_owner").unwrap();
-            let opt_new_destination_account = pubkey_of(arg_matches, "new_destination_address");
-            let opt_new_destination_token_account =
-                pubkey_of(arg_matches, "new_destination_token_address");
-            let payer_keypair = keypair_of(arg_matches, "payer").unwrap();
-            command_change_destination(
-                rpc_client,
-                program_id,
-                destination_account_owner,
-                opt_new_destination_account,
-                opt_new_destination_token_account,
-                vesting_seed,
-                payer_keypair,
-            )
         }
         ("info", Some(arg_matches)) => {
             let vesting_seed = pubkey_of(arg_matches, "seed").unwrap().to_bytes();

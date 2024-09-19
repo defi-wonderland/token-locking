@@ -17,7 +17,7 @@ use arbitrary::Arbitrary;
 impl Arbitrary for VestingInstruction {
     fn arbitrary(u: &mut arbitrary::Unstructured<'_>) -> arbitrary::Result<Self> {
         let seeds: [u8; 32] = u.arbitrary()?;
-        let choice = u.choose(&[0, 1, 2, 3])?;
+        let choice = u.choose(&[0, 1, 2])?;
         match choice {
             0 => {
                 let number_of_schedules = u.arbitrary()?;
@@ -39,8 +39,7 @@ impl Arbitrary for VestingInstruction {
                     schedules: schedules.to_vec(),
                 });
             }
-            2 => return Ok(Self::Unlock { seeds }),
-            _ => return Ok(Self::ChangeDestination { seeds }),
+            _ => return Ok(Self::Unlock { seeds }),
         }
     }
 }
@@ -100,18 +99,6 @@ pub enum VestingInstruction {
     ///   2. `[writable]` The vesting spl-token account
     ///   3. `[writable]` The destination spl-token account
     Unlock { seeds: [u8; 32] },
-
-    /// Change the destination account of a given simple vesting contract (SVC)
-    /// - can only be invoked by the present destination address of the contract.
-    ///
-    /// Accounts expected by this instruction:
-    ///
-    ///   * Single owner
-    ///   0. `[]` The vesting account
-    ///   1. `[]` The current destination token account
-    ///   2. `[signer]` The destination spl-token account owner
-    ///   3. `[]` The new destination spl-token account
-    ChangeDestination { seeds: [u8; 32] },
 }
 
 impl VestingInstruction {
@@ -176,15 +163,12 @@ impl VestingInstruction {
                     schedules,
                 }
             }
-            2 | 3 => {
+            2 => {
                 let seeds: [u8; 32] = rest
                     .get(..32)
                     .and_then(|slice| slice.try_into().ok())
                     .unwrap();
-                match tag {
-                    2 => Self::Unlock { seeds },
-                    _ => Self::ChangeDestination { seeds },
-                }
+                Self::Unlock { seeds }
             }
             _ => {
                 msg!("Unsupported tag");
@@ -221,10 +205,6 @@ impl VestingInstruction {
             }
             &Self::Unlock { seeds } => {
                 buf.push(2);
-                buf.extend_from_slice(&seeds);
-            }
-            &Self::ChangeDestination { seeds } => {
-                buf.push(3);
                 buf.extend_from_slice(&seeds);
             }
         };
@@ -319,28 +299,6 @@ pub fn unlock(
     })
 }
 
-pub fn change_destination(
-    vesting_program_id: &Pubkey,
-    vesting_account_key: &Pubkey,
-    current_destination_token_account_owner: &Pubkey,
-    current_destination_token_account: &Pubkey,
-    target_destination_token_account: &Pubkey,
-    seeds: [u8; 32],
-) -> Result<Instruction, ProgramError> {
-    let data = VestingInstruction::ChangeDestination { seeds }.pack();
-    let accounts = vec![
-        AccountMeta::new(*vesting_account_key, false),
-        AccountMeta::new_readonly(*current_destination_token_account, false),
-        AccountMeta::new_readonly(*current_destination_token_account_owner, true),
-        AccountMeta::new_readonly(*target_destination_token_account, false),
-    ];
-    Ok(Instruction {
-        program_id: *vesting_program_id,
-        accounts,
-        data,
-    })
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -376,12 +334,6 @@ mod test {
         assert_eq!(
             original_init,
             VestingInstruction::unpack(&original_init.pack()).unwrap()
-        );
-
-        let original_change = VestingInstruction::ChangeDestination { seeds: [50u8; 32] };
-        assert_eq!(
-            original_change,
-            VestingInstruction::unpack(&original_change.pack()).unwrap()
         );
     }
 }
