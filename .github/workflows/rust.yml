@@ -30,6 +30,10 @@ jobs:
       working-directory: program
       run: cargo build --verbose
 
+    - name: List
+      working-directory: program
+      run: cargo list
+
     - name: Run tests
       working-directory: program
       run: cargo test --verbose

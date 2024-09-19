@@ -99,14 +99,14 @@ async fn test_token_vesting() {
 
     // Create and process the vesting transactions
     let setup_instructions = [
-        mint_to(
-            &spl_token::id(), 
-            &mint.pubkey(), 
-            &source_token_account.pubkey(), 
-            &mint_authority.pubkey(), 
-            &[], 
-            100
-        ).unwrap()
+        // mint_to(
+        //     &spl_token::id(), 
+        //     &mint.pubkey(), 
+        //     &source_token_account.pubkey(), 
+        //     &mint_authority.pubkey(), 
+        //     &[], 
+        //     100
+        // ).unwrap()
     ];
 
     let schedules = vec![
