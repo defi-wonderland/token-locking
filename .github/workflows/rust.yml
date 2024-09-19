@@ -28,7 +28,7 @@ jobs:
 
     - name: Build
       working-directory: program
-      run: cargo build --keep-going --verbose
+      run: cargo build --verbose
 
     - name: Run tests
       working-directory: program

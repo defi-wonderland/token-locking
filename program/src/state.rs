@@ -20,6 +20,7 @@ pub struct VestingScheduleHeader {
 
 impl Sealed for VestingScheduleHeader {}
 
+#[allow(deprecated)]
 impl Pack for VestingScheduleHeader {
     const LEN: usize = 65;
 
@@ -36,7 +37,7 @@ impl Pack for VestingScheduleHeader {
 
         target[64] = self.is_initialized as u8;
     }
-
+    
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         if src.len() < 65 {
             return Err(ProgramError::InvalidAccountData)

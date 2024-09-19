@@ -114,6 +114,7 @@ pub enum VestingInstruction {
     ChangeDestination { seeds: [u8; 32] },
 }
 
+#[allow(deprecated)]
 impl VestingInstruction {
     pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
         use VestingError::InvalidInstruction;
