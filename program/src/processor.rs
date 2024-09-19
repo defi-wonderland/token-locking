@@ -227,12 +227,11 @@ impl Processor {
         let mut total_amount_to_transfer = 0;
         let mut schedules = unpack_schedules(&packed_state.borrow()[VestingScheduleHeader::LEN..])?;
 
-        for s in schedules.iter_mut() {
-            if clock.unix_timestamp as u64 >= s.release_time {
-                total_amount_to_transfer += s.amount;
-                s.amount = 0;
-            }
+        if clock.unix_timestamp as u64 >= schedules.release_time {
+            total_amount_to_transfer += schedules.amount;
+            schedules.amount = 0;
         }
+
         if total_amount_to_transfer == 0 {
             msg!("Vesting contract has not yet reached release time");
             return Err(ProgramError::InvalidArgument);
