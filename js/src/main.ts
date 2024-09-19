@@ -15,6 +15,7 @@ import {
   createCreateInstruction,
   createInitInstruction,
   createUnlockInstruction,
+  createInitializeUnlockInstruction,
 } from './instructions';
 import { ContractInfo, Schedule } from './state';
 import { assert } from 'console';
@@ -149,6 +150,50 @@ export async function unlock(
 
   let instruction = [
     createUnlockInstruction(
+      programId,
+      TOKEN_PROGRAM_ID,
+      SYSVAR_CLOCK_PUBKEY,
+      vestingAccountKey,
+      vestingTokenAccountKey,
+      vestingInfo.destinationAddress,
+      [seedWord],
+    ),
+  ];
+
+  return instruction;
+}
+
+/**
+ * This function can be used to initialize the unlock of vested tokens
+ * @param connection The Solana RPC connection object
+ * @param programId The token vesting program ID
+ * @param seedWord Seed words used to derive the vesting account
+ * @param mintAddress The mint of the vested tokens
+ * @returns An array of `TransactionInstruction`
+ */
+export async function initializeUnlock(
+  connection: Connection,
+  programId: PublicKey,
+  seedWord: Buffer | Uint8Array,
+  mintAddress: PublicKey,
+): Promise<Array<TransactionInstruction>> {
+  seedWord = seedWord.slice(0, 31);
+  const [vestingAccountKey, bump] = await PublicKey.findProgramAddress(
+    [seedWord],
+    programId,
+  );
+  seedWord = Buffer.from(seedWord.toString('hex') + bump.toString(16), 'hex');
+
+  const vestingTokenAccountKey = await getAssociatedTokenAddress(
+    mintAddress,
+    vestingAccountKey,
+    true,
+  );
+
+  const vestingInfo = await getContractInfo(connection, vestingAccountKey);
+
+  let instruction = [
+    createInitializeUnlockInstruction(
       programId,
       TOKEN_PROGRAM_ID,
       SYSVAR_CLOCK_PUBKEY,

@@ -17,7 +17,7 @@ use arbitrary::Arbitrary;
 impl Arbitrary for VestingInstruction {
     fn arbitrary(u: &mut arbitrary::Unstructured<'_>) -> arbitrary::Result<Self> {
         let seeds: [u8; 32] = u.arbitrary()?;
-        let choice = u.choose(&[0, 1, 2, 3])?;
+        let choice = u.choose(&[0, 1, 2, 3, 4])?;
         match choice {
             0 => {
                 return Ok(Self::Init {
@@ -38,6 +38,7 @@ impl Arbitrary for VestingInstruction {
                 });
             }
             2 => return Ok(Self::Unlock { seeds }),
+            3 => return Ok(Self::InitializeUnlock { seeds }),
             _ => return Ok(Self::ChangeDestination { seeds }),
         }
     }
@@ -96,6 +97,17 @@ pub enum VestingInstruction {
     ///   2. `[writable]` The vesting spl-token account
     ///   3. `[writable]` The destination spl-token account
     Unlock { seeds: [u8; 32] },
+    
+    /// Initializes the unlocking period - can only be invoked by the program itself
+    /// Accounts expected by this instruction:
+    ///
+    ///   * Single owner
+    ///   0. `[]` The spl-token program account
+    ///   1. `[]` The clock sysvar account
+    ///   1. `[writable]` The vesting account
+    ///   2. `[writable]` The vesting spl-token account
+    ///   3. `[writable]` The destination spl-token account
+    InitializeUnlock { seeds: [u8; 32] },
 
     /// Change the destination account of a given simple vesting contract (SVC)
     /// - can only be invoked by the present destination address of the contract.
@@ -161,13 +173,14 @@ impl VestingInstruction {
                     schedule,
                 }
             }
-            2 | 3 => {
+            2 | 3 | 4 => {
                 let seeds: [u8; 32] = rest
                     .get(..32)
                     .and_then(|slice| slice.try_into().ok())
                     .unwrap();
                 match tag {
                     2 => Self::Unlock { seeds },
+                    3 => Self::InitializeUnlock { seeds },
                     _ => Self::ChangeDestination { seeds },
                 }
             }
@@ -204,8 +217,12 @@ impl VestingInstruction {
                 buf.push(2);
                 buf.extend_from_slice(&seeds);
             }
-            &Self::ChangeDestination { seeds } => {
+            &Self::InitializeUnlock { seeds } => {
                 buf.push(3);
+                buf.extend_from_slice(&seeds);
+            }
+            &Self::ChangeDestination { seeds } => {
+                buf.push(4);
                 buf.extend_from_slice(&seeds);
             }
         };
@@ -284,6 +301,31 @@ pub fn unlock(
     seeds: [u8; 32],
 ) -> Result<Instruction, ProgramError> {
     let data = VestingInstruction::Unlock { seeds }.pack();
+    let accounts = vec![
+        AccountMeta::new_readonly(*token_program_id, false),
+        AccountMeta::new_readonly(*clock_sysvar_id, false),
+        AccountMeta::new(*vesting_account_key, false),
+        AccountMeta::new(*vesting_token_account_key, false),
+        AccountMeta::new(*destination_token_account_key, false),
+    ];
+    Ok(Instruction {
+        program_id: *vesting_program_id,
+        accounts,
+        data,
+    })
+}
+
+// Creates an `Unlock` instruction
+pub fn initialize_unlock(
+    vesting_program_id: &Pubkey,
+    token_program_id: &Pubkey,
+    clock_sysvar_id: &Pubkey,
+    vesting_account_key: &Pubkey,
+    vesting_token_account_key: &Pubkey,
+    destination_token_account_key: &Pubkey,
+    seeds: [u8; 32],
+) -> Result<Instruction, ProgramError> {
+    let data = VestingInstruction::InitializeUnlock { seeds }.pack();
     let accounts = vec![
         AccountMeta::new_readonly(*token_program_id, false),
         AccountMeta::new_readonly(*clock_sysvar_id, false),
