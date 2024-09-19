@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use solana_program::{
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack, Sealed},
@@ -20,7 +22,6 @@ pub struct VestingScheduleHeader {
 
 impl Sealed for VestingScheduleHeader {}
 
-#[allow(deprecated)]
 impl Pack for VestingScheduleHeader {
     const LEN: usize = 65;
 
@@ -42,9 +43,11 @@ impl Pack for VestingScheduleHeader {
         if src.len() < 65 {
             return Err(ProgramError::InvalidAccountData)
         }
-        let destination_address = Pubkey::new(&src[..32]);
-        let mint_address = Pubkey::new(&src[32..64]);
-        let is_initialized = src[64] == 1;
+        let destination_address = Pubkey::try_from(&src[..32])
+            .map_err(|_| ProgramError::InvalidArgument)?;
+        let mint_address = Pubkey::try_from(&src[32..64])
+            .map_err(|_| ProgramError::InvalidArgument)?;
+            let is_initialized = src[64] == 1;
         Ok(Self {
             destination_address,
             mint_address,
