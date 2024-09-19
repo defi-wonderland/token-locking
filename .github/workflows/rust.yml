@@ -32,4 +32,4 @@ jobs:
 
     - name: Run tests
       working-directory: program
-      run: cargo test-bpf --verbose
+      run: cargo test --verbose
