@@ -17,7 +17,7 @@ use spl_token;
 use std::convert::TryInto;
 use token_vesting::{
     instruction::{change_destination, create, init, unlock, Schedule},
-    state::{unpack_schedules, VestingScheduleHeader},
+    state::{unpack_schedule, VestingScheduleHeader},
 };
 
 // Lock the vesting contract
@@ -221,7 +221,7 @@ fn command_info(
         &state_header.destination_address
     );
 
-    let schedules = unpack_schedules(&packed_state[VestingScheduleHeader::LEN..]).unwrap();
+    let schedules = unpack_schedule(&packed_state[VestingScheduleHeader::LEN..]).unwrap();
 
     for i in 0..schedules.len() {
         msg!("\nSCHEDULE {:?}", i);

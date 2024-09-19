@@ -88,7 +88,7 @@ impl IsInitialized for VestingScheduleHeader {
     }
 }
 
-pub fn unpack_schedules(input: &[u8]) -> Result<VestingSchedule, ProgramError> {
+pub fn unpack_schedule(input: &[u8]) -> Result<VestingSchedule, ProgramError> {
     let offset = 0;
     let output: VestingSchedule = VestingSchedule::unpack_from_slice(
         &input[offset..offset + VestingSchedule::LEN],
@@ -96,14 +96,14 @@ pub fn unpack_schedules(input: &[u8]) -> Result<VestingSchedule, ProgramError> {
     Ok(output)
 }
 
-pub fn pack_schedules_into_slice(schedule: VestingSchedule, target: &mut [u8]) {
+pub fn pack_schedule_into_slice(schedule: VestingSchedule, target: &mut [u8]) {
     let offset = 0;
     schedule.pack_into_slice(&mut target[offset..]);
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{unpack_schedules, VestingSchedule, VestingScheduleHeader};
+    use super::{unpack_schedule, VestingSchedule, VestingScheduleHeader};
     use solana_program::{program_pack::Pack, pubkey::Pubkey};
 
     #[test]
@@ -137,7 +137,7 @@ mod tests {
         let unpacked_header =
             VestingScheduleHeader::unpack(&packed[..VestingScheduleHeader::LEN]).unwrap();
         assert_eq!(unpacked_header, header_state);
-        let unpacked_schedules = unpack_schedules(&packed[VestingScheduleHeader::LEN..]).unwrap();
+        let unpacked_schedules = unpack_schedule(&packed[VestingScheduleHeader::LEN..]).unwrap();
         assert_eq!(unpacked_schedules, schedule_state);
     }
 }

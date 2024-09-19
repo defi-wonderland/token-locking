@@ -20,14 +20,12 @@ impl Arbitrary for VestingInstruction {
         let choice = u.choose(&[0, 1, 2, 3])?;
         match choice {
             0 => {
-                let number_of_schedules = u.arbitrary()?;
                 return Ok(Self::Init {
                     seeds,
-                    number_of_schedules,
                 });
             }
             1 => {
-                let schedules: [Schedule; 10] = u.arbitrary()?;
+                let schedule: [Schedule; 10] = u.arbitrary()?;
                 let key_bytes: [u8; 32] = u.arbitrary()?;
                 let mint_address: Pubkey = Pubkey::new(&key_bytes);
                 let key_bytes: [u8; 32] = u.arbitrary()?;
@@ -36,7 +34,7 @@ impl Arbitrary for VestingInstruction {
                     seeds,
                     mint_address,
                     destination_token_address,
-                    schedules: schedules.to_vec(),
+                    schedule: schedule,
                 });
             }
             2 => return Ok(Self::Unlock { seeds }),
@@ -71,8 +69,6 @@ pub enum VestingInstruction {
     Init {
         // The seed used to derive the vesting accounts address
         seeds: [u8; 32],
-        // The number of release schedules for this contract to hold
-        number_of_schedules: u32,
     },
     /// Creates a new vesting schedule contract
     ///
@@ -88,7 +84,7 @@ pub enum VestingInstruction {
         seeds: [u8; 32],
         mint_address: Pubkey,
         destination_token_address: Pubkey,
-        schedules: Vec<Schedule>,
+        schedule: Schedule,
     },
     /// Unlocks a simple vesting contract (SVC) - can only be invoked by the program itself
     /// Accounts expected by this instruction:
@@ -124,14 +120,8 @@ impl VestingInstruction {
                     .get(..32)
                     .and_then(|slice| slice.try_into().ok())
                     .unwrap();
-                let number_of_schedules = rest
-                    .get(32..36)
-                    .and_then(|slice| slice.try_into().ok())
-                    .map(u32::from_le_bytes)
-                    .ok_or(InvalidInstruction)?;
                 Self::Init {
                     seeds,
-                    number_of_schedules,
                 }
             }
             1 => {
@@ -149,31 +139,26 @@ impl VestingInstruction {
                     .and_then(|slice| slice.try_into().ok())
                     .map(Pubkey::new)
                     .ok_or(InvalidInstruction)?;
-                let number_of_schedules = rest[96..].len() / SCHEDULE_SIZE;
-                let mut schedules: Vec<Schedule> = Vec::with_capacity(number_of_schedules);
-                let mut offset = 96;
-                for _ in 0..number_of_schedules {
-                    let release_time = rest
-                        .get(offset..offset + 8)
-                        .and_then(|slice| slice.try_into().ok())
-                        .map(u64::from_le_bytes)
-                        .ok_or(InvalidInstruction)?;
-                    let amount = rest
-                        .get(offset + 8..offset + 16)
-                        .and_then(|slice| slice.try_into().ok())
-                        .map(u64::from_le_bytes)
-                        .ok_or(InvalidInstruction)?;
-                    offset += SCHEDULE_SIZE;
-                    schedules.push(Schedule {
-                        release_time,
-                        amount,
-                    })
-                }
+                let offset = 96;
+                let release_time = rest
+                    .get(offset..offset + 8)
+                    .and_then(|slice| slice.try_into().ok())
+                    .map(u64::from_le_bytes)
+                    .ok_or(InvalidInstruction)?;
+                let amount = rest
+                    .get(offset + 8..offset + 16)
+                    .and_then(|slice| slice.try_into().ok())
+                    .map(u64::from_le_bytes)
+                    .ok_or(InvalidInstruction)?;
+                let schedule = Schedule {
+                    release_time,
+                    amount,
+                };
                 Self::Create {
                     seeds,
                     mint_address,
                     destination_token_address,
-                    schedules,
+                    schedule,
                 }
             }
             2 | 3 => {
@@ -198,26 +183,22 @@ impl VestingInstruction {
         match self {
             &Self::Init {
                 seeds,
-                number_of_schedules,
             } => {
                 buf.push(0);
                 buf.extend_from_slice(&seeds);
-                buf.extend_from_slice(&number_of_schedules.to_le_bytes())
             }
             Self::Create {
                 seeds,
                 mint_address,
                 destination_token_address,
-                schedules,
+                schedule,
             } => {
                 buf.push(1);
                 buf.extend_from_slice(seeds);
                 buf.extend_from_slice(&mint_address.to_bytes());
                 buf.extend_from_slice(&destination_token_address.to_bytes());
-                for s in schedules.iter() {
-                    buf.extend_from_slice(&s.release_time.to_le_bytes());
-                    buf.extend_from_slice(&s.amount.to_le_bytes());
-                }
+                buf.extend_from_slice(&schedule.release_time.to_le_bytes());
+                buf.extend_from_slice(&schedule.amount.to_le_bytes());
             }
             &Self::Unlock { seeds } => {
                 buf.push(2);
@@ -240,11 +221,9 @@ pub fn init(
     payer_key: &Pubkey,
     vesting_account: &Pubkey,
     seeds: [u8; 32],
-    number_of_schedules: u32,
 ) -> Result<Instruction, ProgramError> {
     let data = VestingInstruction::Init {
         seeds,
-        number_of_schedules,
     }
     .pack();
     let accounts = vec![
@@ -270,14 +249,14 @@ pub fn create(
     source_token_account_key: &Pubkey,
     destination_token_account_key: &Pubkey,
     mint_address: &Pubkey,
-    schedules: Vec<Schedule>,
+    schedule: Schedule,
     seeds: [u8; 32],
 ) -> Result<Instruction, ProgramError> {
     let data = VestingInstruction::Create {
         mint_address: *mint_address,
         seeds,
         destination_token_address: *destination_token_account_key,
-        schedules,
+        schedule,
     }
     .pack();
     let accounts = vec![
@@ -352,10 +331,10 @@ mod test {
 
         let original_create = VestingInstruction::Create {
             seeds: [50u8; 32],
-            schedules: vec![Schedule {
+            schedule: Schedule {
                 amount: 42,
                 release_time: 250,
-            }],
+            },
             mint_address: mint_address.clone(),
             destination_token_address,
         };
@@ -370,7 +349,6 @@ mod test {
         );
 
         let original_init = VestingInstruction::Init {
-            number_of_schedules: 42,
             seeds: [50u8; 32],
         };
         assert_eq!(
