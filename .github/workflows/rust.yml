@@ -30,9 +30,9 @@ jobs:
       working-directory: program
       run: cargo --list
 
-    - name: Build
+    - name: Test help
       working-directory: program
-      run: cargo build --verbose
+      run: cargo test --help
 
     - name: Run tests
       working-directory: program
