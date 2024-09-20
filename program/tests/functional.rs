@@ -2,10 +2,10 @@
 use std::str::FromStr;
 
 use solana_program::{
-    hash::Hash, program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_program, sysvar,
+    hash::Hash, pubkey::Pubkey, rent::Rent, system_program, sysvar,
     sysvar::clock::Clock,
 };
-use solana_program_test::{processor, BanksClient, ProgramTest, ProgramTestContext};
+use solana_program_test::{processor, ProgramTest, ProgramTestContext};
 use solana_sdk::{
     account::Account, signature::Keypair, signature::Signer, system_instruction,
     transaction::Transaction,
@@ -15,7 +15,7 @@ use spl_token::{
     self,
     instruction::{initialize_account, initialize_mint, mint_to},
 };
-use token_vesting::instruction::{change_destination, create, init, initialize_unlock, unlock};
+use token_vesting::instruction::{create, init, initialize_unlock, unlock};
 use token_vesting::{entrypoint::process_instruction, instruction::Schedule};
 
 #[tokio::test]
