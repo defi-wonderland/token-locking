@@ -10,3 +10,4 @@ cli/target/.rustc_info.json
 /node_modules
 
 js/dist
+**/wallet.json

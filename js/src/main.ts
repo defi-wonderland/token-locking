@@ -38,7 +38,7 @@ export const TOKEN_VESTING_PROGRAM_ID = new PublicKey(
  * @param possibleSourceTokenPubkey The source token account (i.e where locked tokens are originating from), if null it defaults to the ATA
  * @param destinationTokenPubkey The destination token account i.e where unlocked tokens will be transfered
  * @param mintAddress The mint of the tokens being vested
- * @param schedules The array of vesting schedules
+ * @param schedule The vesting schedule
  * @returns An array of `TransactionInstruction`
  */
 export async function create(
@@ -50,7 +50,7 @@ export async function create(
   possibleSourceTokenPubkey: PublicKey | null,
   destinationTokenPubkey: PublicKey,
   mintAddress: PublicKey,
-  schedules: Array<Schedule>,
+  schedule: Schedule,
 ): Promise<Array<TransactionInstruction>> {
   // If no source token account was given, use the associated source account
   if (possibleSourceTokenPubkey == null) {
@@ -94,8 +94,7 @@ export async function create(
       programId,
       payer,
       vestingAccountKey,
-      [seedWord],
-      schedules.length,
+      [seedWord]
     ),
     createAssociatedTokenAccountInstruction(
       payer,
@@ -112,7 +111,7 @@ export async function create(
       possibleSourceTokenPubkey,
       destinationTokenPubkey,
       mintAddress,
-      schedules,
+      schedule,
       [seedWord],
     ),
   ];

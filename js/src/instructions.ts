@@ -12,14 +12,11 @@ export function createInitInstruction(
   vestingProgramId: PublicKey,
   payerKey: PublicKey,
   vestingAccountKey: PublicKey,
-  seeds: Array<Buffer | Uint8Array>,
-  numberOfSchedules: number,
+  seeds: Array<Buffer | Uint8Array>
 ): TransactionInstruction {
   let buffers = [
     Buffer.from(Int8Array.from([0]).buffer),
     Buffer.concat(seeds),
-    // @ts-ignore
-    new Numberu32(numberOfSchedules).toBuffer(),
   ];
 
   const data = Buffer.concat(buffers);
@@ -62,7 +59,7 @@ export function createCreateInstruction(
   sourceTokenAccountKey: PublicKey,
   destinationTokenAccountKey: PublicKey,
   mintAddress: PublicKey,
-  schedules: Array<Schedule>,
+  schedule: Schedule,
   seeds: Array<Buffer | Uint8Array>,
 ): TransactionInstruction {
   let buffers = [
@@ -72,9 +69,7 @@ export function createCreateInstruction(
     destinationTokenAccountKey.toBuffer(),
   ];
 
-  schedules.forEach(s => {
-    buffers.push(s.toBuffer());
-  });
+  buffers.push(schedule.toBuffer());
 
   const data = Buffer.concat(buffers);
   const keys = [
