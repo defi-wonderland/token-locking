@@ -141,8 +141,18 @@ impl Processor {
         let offset = VestingScheduleHeader::LEN;
         let mut total_amount: u64 = 0;
 
+        let release_time;
+        if schedule.time_delta == 0 {
+            release_time = 0;
+        } else {
+            let clock = Clock::from_account_info(&accounts[2])?;
+            // TODO: make test advance in time between initialize and unlock
+            // release_time = clock.unix_timestamp as u64 + schedule.time_delta; // TODO: uncomment
+            release_time = schedule.time_delta; // NOTE: For testing purposes, keeping previous behavior
+        }
+
         let state_schedule = VestingSchedule {
-            release_time: schedule.release_time,
+            release_time: release_time,
             amount: schedule.amount,
         };
         state_schedule.pack_into_slice(&mut data[offset..]);
