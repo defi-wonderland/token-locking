@@ -181,12 +181,12 @@ async fn test_token_vesting() {
         Transaction::new_with_payer(&test_instructions, Some(&payer.pubkey()));
     test_transaction.partial_sign(&[&payer, &source_account], recent_blockhash);
 
-    // NOTE: test is failing because we cannot advance the clock
-    // TODO: uncomment this line to reactivate the test
-    // banks_client
-    //     .process_transaction(test_transaction)
-    //     .await
-    //     .unwrap();
+    // NOTE: we're NOT doing `now() + time_delta` in the program (but we should), that's why this test passes
+    // TODO: add warp_to_timestamp to correctly test the behaviour
+    banks_client
+        .process_transaction(test_transaction)
+        .await
+        .unwrap();
 }
 
 #[tokio::test]

@@ -149,8 +149,8 @@ impl Processor {
             },
             1 | 100 | 300 => { // TODO: replace for validated values
                 // Valid time_delta values, do nothing 
-                let clock = Clock::from_account_info(&accounts[2])?;
                 // TODO: make test advance in time between initialize and unlock
+                // let clock = Clock::from_account_info(&clock_sysvar_account)?;
                 // release_time = clock.unix_timestamp as u64 + schedule.time_delta; // TODO: uncomment
                 release_time = schedule.time_delta; // NOTE: For testing purposes, keeping previous behavior
             }            
