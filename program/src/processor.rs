@@ -18,7 +18,7 @@ use spl_token::{instruction::transfer, state::Account};
 
 use crate::{
     error::VestingError,
-    instruction::{Schedule, VestingInstruction, SCHEDULE_SIZE},
+    instruction::{Schedule, VestingInstruction},
     state::{pack_schedule_into_slice, unpack_schedule, VestingSchedule, VestingScheduleHeader},
 };
 
@@ -28,7 +28,7 @@ impl Processor {
     pub fn process_init(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        seeds: [u8; 32]
+        seeds: [u8; 32],
     ) -> ProgramResult {
         let accounts_iter = &mut accounts.iter();
 
@@ -134,7 +134,7 @@ impl Processor {
 
         let mut data = vesting_account.data.borrow_mut();
         if data.len() != VestingScheduleHeader::LEN + VestingSchedule::LEN {
-            return Err(ProgramError::InvalidAccountData)
+            return Err(ProgramError::InvalidAccountData);
         }
         state_header.pack_into_slice(&mut data);
 
@@ -151,10 +151,10 @@ impl Processor {
             Some(n) => total_amount = n,
             None => return Err(ProgramError::InvalidInstructionData), // Total amount overflows u64
         }
-        
+
         if Account::unpack(&source_token_account.data.borrow())?.amount < total_amount {
             msg!("The source token account has insufficient funds.");
-            return Err(ProgramError::InsufficientFunds)
+            return Err(ProgramError::InsufficientFunds);
         };
 
         let transfer_tokens_to_vesting_account = transfer(
@@ -199,7 +199,7 @@ impl Processor {
 
         if spl_token_account.key != &spl_token::id() {
             msg!("The provided spl token program account is invalid");
-            return Err(ProgramError::InvalidArgument)
+            return Err(ProgramError::InvalidArgument);
         }
 
         let packed_state = &vesting_account.data;
@@ -228,6 +228,7 @@ impl Processor {
             return Err(ProgramError::InvalidArgument);
         }
 
+        msg!("UNIX: {}", clock.unix_timestamp);  // TODO: rm
         if clock.unix_timestamp as u64 >= schedule.release_time {
             total_amount_to_transfer += schedule.amount;
             schedule.amount = 0;
@@ -288,7 +289,7 @@ impl Processor {
 
         if spl_token_account.key != &spl_token::id() {
             msg!("The provided spl token program account is invalid");
-            return Err(ProgramError::InvalidArgument)
+            return Err(ProgramError::InvalidArgument);
         }
 
         let packed_state = &vesting_account.data;
@@ -320,9 +321,11 @@ impl Processor {
             msg!("Shouldn't initialize withdrawal for already initialized schedule");
             return Err(ProgramError::InvalidArgument);
         }
-        
+
+        msg!("UNIX: {}", clock.unix_timestamp); // TODO: rm
         // TODO: make test advance in time between initialize and unlock
-        schedule.release_time = 1; // clock.unix_timestamp as u64 + 604800; // 7 days
+        // schedule.release_time = clock.unix_timestamp as u64 + 1; // TODO: change 1 for 7 days
+        schedule.release_time = 1; // NOTE: For testing purposes, !=0 and < current time
 
         // Reset released amounts to 0. This makes the simple unlock safe with complex scheduling contracts
         pack_schedule_into_slice(
@@ -346,7 +349,7 @@ impl Processor {
         let new_destination_token_account = next_account_info(accounts_iter)?;
 
         if vesting_account.data.borrow().len() < VestingScheduleHeader::LEN {
-            return Err(ProgramError::InvalidAccountData)
+            return Err(ProgramError::InvalidAccountData);
         }
         let vesting_account_key = Pubkey::create_program_address(&[&seeds], program_id)?;
         let state = VestingScheduleHeader::unpack(
@@ -392,9 +395,7 @@ impl Processor {
         let instruction = VestingInstruction::unpack(instruction_data)?;
         msg!("Instruction unpacked");
         match instruction {
-            VestingInstruction::Init {
-                seeds,
-            } => {
+            VestingInstruction::Init { seeds } => {
                 msg!("Instruction: Init");
                 Self::process_init(program_id, accounts, seeds)
             }
