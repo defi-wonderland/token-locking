@@ -141,14 +141,23 @@ impl Processor {
         let offset = VestingScheduleHeader::LEN;
         let mut total_amount: u64 = 0;
 
+        // NOTE: validate time delta to be 0 (unlocked), or a set of predefined values (1 month, 3 months, ...)
         let release_time;
-        if schedule.time_delta == 0 {
-            release_time = 0;
-        } else {
-            let clock = Clock::from_account_info(&accounts[2])?;
-            // TODO: make test advance in time between initialize and unlock
-            // release_time = clock.unix_timestamp as u64 + schedule.time_delta; // TODO: uncomment
-            release_time = schedule.time_delta; // NOTE: For testing purposes, keeping previous behavior
+        match schedule.time_delta {
+            0 => {
+                release_time = 0;
+            },
+            1 | 100 | 300 => { // TODO: replace for validated values
+                // Valid time_delta values, do nothing 
+                let clock = Clock::from_account_info(&accounts[2])?;
+                // TODO: make test advance in time between initialize and unlock
+                // release_time = clock.unix_timestamp as u64 + schedule.time_delta; // TODO: uncomment
+                release_time = schedule.time_delta; // NOTE: For testing purposes, keeping previous behavior
+            }            
+            _ => {
+                msg!("Unsupported time delta");
+                return Err(ProgramError::InvalidInstructionData);
+            }
         }
 
         let state_schedule = VestingSchedule {
