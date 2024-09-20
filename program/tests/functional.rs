@@ -3,7 +3,6 @@ use std::str::FromStr;
 
 use solana_program::{
     hash::Hash, pubkey::Pubkey, rent::Rent, system_program, sysvar,
-    sysvar::clock::Clock,
 };
 use solana_program_test::{processor, ProgramTest, ProgramTestContext};
 use solana_sdk::{
