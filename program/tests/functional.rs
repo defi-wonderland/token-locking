@@ -24,12 +24,6 @@ async fn test_token_vesting() {
     let source_account = Keypair::new();
     let source_token_account = Keypair::new();
 
-    let destination_account = Keypair::new();
-    let destination_token_account = Keypair::new();
-
-    let new_destination_account = Keypair::new();
-    let new_destination_token_account = Keypair::new();
-
     let mut seeds = [42u8; 32];
     let (vesting_account_key, bump) = Pubkey::find_program_address(&[&seeds[..31]], &program_id);
     seeds[31] = bump;
@@ -89,12 +83,6 @@ async fn test_token_vesting() {
     banks_client.process_transaction(
         create_token_account(&payer, &mint, recent_blockhash, &vesting_token_account, &vesting_account_key)
     ).await.unwrap();
-    banks_client.process_transaction(
-        create_token_account(&payer, &mint, recent_blockhash, &destination_token_account, &destination_account.pubkey())
-    ).await.unwrap();
-    banks_client.process_transaction(
-        create_token_account(&payer, &mint, recent_blockhash, &new_destination_token_account, &new_destination_account.pubkey())
-    ).await.unwrap();
 
 
     // Create and process the vesting transactions
@@ -123,7 +111,6 @@ async fn test_token_vesting() {
             &vesting_token_account.pubkey(),
             &source_account.pubkey(),
             &source_token_account.pubkey(),
-            &destination_token_account.pubkey(),
             &mint.pubkey(),
             schedules,
             seeds.clone()
@@ -134,7 +121,7 @@ async fn test_token_vesting() {
             &sysvar::clock::id(),
             &vesting_account_key,
             &vesting_token_account.pubkey(),
-            &destination_token_account.pubkey(),
+            &source_token_account.pubkey(),
             seeds.clone()
         ).unwrap()
     ];

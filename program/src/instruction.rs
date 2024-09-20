@@ -86,7 +86,6 @@ pub enum VestingInstruction {
     Create {
         seeds: [u8; 32],
         mint_address: Pubkey,
-        destination_token_address: Pubkey,
         schedules: Vec<Schedule>,
     },
     /// Unlocks a simple vesting contract (SVC) - can only be invoked by the program itself
@@ -131,14 +130,9 @@ impl VestingInstruction {
                     .and_then(|slice| slice.try_into().ok())
                     .map(Pubkey::new)
                     .ok_or(InvalidInstruction)?;
-                let destination_token_address = rest
-                    .get(64..96)
-                    .and_then(|slice| slice.try_into().ok())
-                    .map(Pubkey::new)
-                    .ok_or(InvalidInstruction)?;
-                let number_of_schedules = rest[96..].len() / SCHEDULE_SIZE;
+                let number_of_schedules = rest[64..].len() / SCHEDULE_SIZE;
                 let mut schedules: Vec<Schedule> = Vec::with_capacity(number_of_schedules);
-                let mut offset = 96;
+                let mut offset = 64;
                 for _ in 0..number_of_schedules {
                     let release_time = rest
                         .get(offset..offset + 8)
@@ -159,7 +153,6 @@ impl VestingInstruction {
                 Self::Create {
                     seeds,
                     mint_address,
-                    destination_token_address,
                     schedules,
                 }
             }
@@ -191,13 +184,11 @@ impl VestingInstruction {
             Self::Create {
                 seeds,
                 mint_address,
-                destination_token_address,
                 schedules,
             } => {
                 buf.push(1);
                 buf.extend_from_slice(seeds);
                 buf.extend_from_slice(&mint_address.to_bytes());
-                buf.extend_from_slice(&destination_token_address.to_bytes());
                 for s in schedules.iter() {
                     buf.extend_from_slice(&s.release_time.to_le_bytes());
                     buf.extend_from_slice(&s.amount.to_le_bytes());
@@ -248,7 +239,6 @@ pub fn create(
     vesting_token_account_key: &Pubkey,
     source_token_account_owner_key: &Pubkey,
     source_token_account_key: &Pubkey,
-    destination_token_account_key: &Pubkey,
     mint_address: &Pubkey,
     schedules: Vec<Schedule>,
     seeds: [u8; 32],
@@ -256,7 +246,6 @@ pub fn create(
     let data = VestingInstruction::Create {
         mint_address: *mint_address,
         seeds,
-        destination_token_address: *destination_token_account_key,
         schedules,
     }
     .pack();
@@ -306,7 +295,6 @@ mod test {
     #[test]
     fn test_instruction_packing() {
         let mint_address = Pubkey::new_unique();
-        let destination_token_address = Pubkey::new_unique();
 
         let original_create = VestingInstruction::Create {
             seeds: [50u8; 32],
@@ -315,7 +303,6 @@ mod test {
                 release_time: 250,
             }],
             mint_address: mint_address.clone(),
-            destination_token_address,
         };
         let packed_create = original_create.pack();
         let unpacked_create = VestingInstruction::unpack(&packed_create).unwrap();

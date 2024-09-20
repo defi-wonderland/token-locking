@@ -74,7 +74,6 @@ impl Processor {
         accounts: &[AccountInfo],
         seeds: [u8; 32],
         mint_address: &Pubkey,
-        destination_token_address: &Pubkey,
         schedules: Vec<Schedule>,
     ) -> ProgramResult {
         let accounts_iter = &mut accounts.iter();
@@ -128,7 +127,7 @@ impl Processor {
         }
 
         let state_header = VestingScheduleHeader {
-            destination_address: *destination_token_address,
+            destination_address: *source_token_account.key,
             mint_address: *mint_address,
             is_initialized: true,
         };
@@ -290,7 +289,6 @@ impl Processor {
             VestingInstruction::Create {
                 seeds,
                 mint_address,
-                destination_token_address,
                 schedules,
             } => {
                 msg!("Instruction: Create Schedule");
@@ -299,7 +297,6 @@ impl Processor {
                     accounts,
                     seeds,
                     &mint_address,
-                    &destination_token_address,
                     schedules,
                 )
             }
