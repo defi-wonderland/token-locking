@@ -18,7 +18,7 @@ use spl_token::{instruction::transfer, state::Account};
 
 use crate::{
     error::VestingError,
-    instruction::{Schedule, VestingInstruction, SCHEDULE_SIZE},
+    instruction::{Schedule, VestingInstruction},
     state::{pack_schedule_into_slice, unpack_schedule, VestingSchedule, VestingScheduleHeader},
 };
 
