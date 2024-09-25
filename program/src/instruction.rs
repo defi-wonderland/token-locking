@@ -17,7 +17,7 @@ use arbitrary::Arbitrary;
 impl Arbitrary for VestingInstruction {
     fn arbitrary(u: &mut arbitrary::Unstructured<'_>) -> arbitrary::Result<Self> {
         let seeds: [u8; 32] = u.arbitrary()?;
-        let choice = u.choose(&[0, 1, 2, 3, 4])?;
+        let choice = u.choose(&[0, 1, 2, 3])?;
         match choice {
             0 => {
                 return Ok(Self::Init {
@@ -29,17 +29,14 @@ impl Arbitrary for VestingInstruction {
                 let key_bytes: [u8; 32] = u.arbitrary()?;
                 let mint_address: Pubkey = Pubkey::new_from_array(key_bytes);
                 let key_bytes: [u8; 32] = u.arbitrary()?;
-                let destination_token_address: Pubkey = Pubkey::new_from_array(key_bytes);
                 return Ok(Self::Create {
                     seeds,
                     mint_address,
-                    destination_token_address,
                     schedule: schedule,
                 });
             }
             2 => return Ok(Self::Unlock { seeds }),
-            3 => return Ok(Self::InitializeUnlock { seeds }),
-            _ => return Ok(Self::ChangeDestination { seeds }),
+            _ => return Ok(Self::InitializeUnlock { seeds }),
         }
     }
 }
@@ -84,7 +81,6 @@ pub enum VestingInstruction {
     Create {
         seeds: [u8; 32],
         mint_address: Pubkey,
-        destination_token_address: Pubkey,
         schedule: Schedule,
     },
     /// Unlocks a simple vesting contract (SVC) - can only be invoked by the program itself
@@ -108,18 +104,6 @@ pub enum VestingInstruction {
     ///   2. `[writable]` The vesting spl-token account
     ///   3. `[writable]` The destination spl-token account
     InitializeUnlock { seeds: [u8; 32] },
-
-    /// Change the destination account of a given simple vesting contract (SVC)
-    /// - can only be invoked by the present destination address of the contract.
-    ///
-    /// Accounts expected by this instruction:
-    ///
-    ///   * Single owner
-    ///   0. `[]` The vesting account
-    ///   1. `[]` The current destination token account
-    ///   2. `[signer]` The destination spl-token account owner
-    ///   3. `[]` The new destination spl-token account
-    ChangeDestination { seeds: [u8; 32] },
 }
 
 impl VestingInstruction {
@@ -146,12 +130,7 @@ impl VestingInstruction {
                     .and_then(|slice| slice.try_into().ok())
                     .map(Pubkey::new_from_array)
                     .ok_or(InvalidInstruction)?;
-                let destination_token_address = rest
-                    .get(64..96)
-                    .and_then(|slice| slice.try_into().ok())
-                    .map(Pubkey::new_from_array)
-                    .ok_or(InvalidInstruction)?;
-                let offset = 96;
+                let offset = 64;
                 let release_time = rest
                     .get(offset..offset + 8)
                     .and_then(|slice| slice.try_into().ok())
@@ -169,19 +148,17 @@ impl VestingInstruction {
                 Self::Create {
                     seeds,
                     mint_address,
-                    destination_token_address,
                     schedule,
                 }
             }
-            2 | 3 | 4 => {
+            2 | 3 => {
                 let seeds: [u8; 32] = rest
                     .get(..32)
                     .and_then(|slice| slice.try_into().ok())
                     .unwrap();
                 match tag {
                     2 => Self::Unlock { seeds },
-                    3 => Self::InitializeUnlock { seeds },
-                    _ => Self::ChangeDestination { seeds },
+                    _ => Self::InitializeUnlock { seeds },
                 }
             }
             _ => {
@@ -203,13 +180,11 @@ impl VestingInstruction {
             Self::Create {
                 seeds,
                 mint_address,
-                destination_token_address,
                 schedule,
             } => {
                 buf.push(1);
                 buf.extend_from_slice(seeds);
                 buf.extend_from_slice(&mint_address.to_bytes());
-                buf.extend_from_slice(&destination_token_address.to_bytes());
                 buf.extend_from_slice(&schedule.release_time.to_le_bytes());
                 buf.extend_from_slice(&schedule.amount.to_le_bytes());
             }
@@ -219,10 +194,6 @@ impl VestingInstruction {
             }
             &Self::InitializeUnlock { seeds } => {
                 buf.push(3);
-                buf.extend_from_slice(&seeds);
-            }
-            &Self::ChangeDestination { seeds } => {
-                buf.push(4);
                 buf.extend_from_slice(&seeds);
             }
         };
@@ -264,7 +235,6 @@ pub fn create(
     vesting_token_account_key: &Pubkey,
     source_token_account_owner_key: &Pubkey,
     source_token_account_key: &Pubkey,
-    destination_token_account_key: &Pubkey,
     mint_address: &Pubkey,
     schedule: Schedule,
     seeds: [u8; 32],
@@ -272,7 +242,6 @@ pub fn create(
     let data = VestingInstruction::Create {
         mint_address: *mint_address,
         seeds,
-        destination_token_address: *destination_token_account_key,
         schedule,
     }
     .pack();
@@ -340,28 +309,6 @@ pub fn initialize_unlock(
     })
 }
 
-pub fn change_destination(
-    vesting_program_id: &Pubkey,
-    vesting_account_key: &Pubkey,
-    current_destination_token_account_owner: &Pubkey,
-    current_destination_token_account: &Pubkey,
-    target_destination_token_account: &Pubkey,
-    seeds: [u8; 32],
-) -> Result<Instruction, ProgramError> {
-    let data = VestingInstruction::ChangeDestination { seeds }.pack();
-    let accounts = vec![
-        AccountMeta::new(*vesting_account_key, false),
-        AccountMeta::new_readonly(*current_destination_token_account, false),
-        AccountMeta::new_readonly(*current_destination_token_account_owner, true),
-        AccountMeta::new_readonly(*target_destination_token_account, false),
-    ];
-    Ok(Instruction {
-        program_id: *vesting_program_id,
-        accounts,
-        data,
-    })
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -369,7 +316,6 @@ mod test {
     #[test]
     fn test_instruction_packing() {
         let mint_address = Pubkey::new_unique();
-        let destination_token_address = Pubkey::new_unique();
 
         let original_create = VestingInstruction::Create {
             seeds: [50u8; 32],
@@ -378,7 +324,6 @@ mod test {
                 release_time: 250,
             },
             mint_address: mint_address.clone(),
-            destination_token_address,
         };
         let packed_create = original_create.pack();
         let unpacked_create = VestingInstruction::unpack(&packed_create).unwrap();
@@ -396,12 +341,6 @@ mod test {
         assert_eq!(
             original_init,
             VestingInstruction::unpack(&original_init.pack()).unwrap()
-        );
-
-        let original_change = VestingInstruction::ChangeDestination { seeds: [50u8; 32] };
-        assert_eq!(
-            original_change,
-            VestingInstruction::unpack(&original_change.pack()).unwrap()
         );
     }
 }
