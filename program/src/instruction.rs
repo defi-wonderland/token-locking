@@ -29,9 +29,9 @@ impl Arbitrary for VestingInstruction {
             1 => {
                 let schedules: [Schedule; 10] = u.arbitrary()?;
                 let key_bytes: [u8; 32] = u.arbitrary()?;
-                let mint_address: Pubkey = Pubkey::new(&key_bytes);
+                let mint_address: Pubkey = Pubkey::new_from_array(key_bytes);
                 let key_bytes: [u8; 32] = u.arbitrary()?;
-                let destination_token_address: Pubkey = Pubkey::new(&key_bytes);
+                let destination_token_address: Pubkey = Pubkey::new_from_array(key_bytes);
                 return Ok(Self::Create {
                     seeds,
                     mint_address,
@@ -128,7 +128,7 @@ impl VestingInstruction {
                 let mint_address = rest
                     .get(32..64)
                     .and_then(|slice| slice.try_into().ok())
-                    .map(Pubkey::new)
+                    .map(Pubkey::new_from_array)
                     .ok_or(InvalidInstruction)?;
                 let number_of_schedules = rest[64..].len() / SCHEDULE_SIZE;
                 let mut schedules: Vec<Schedule> = Vec::with_capacity(number_of_schedules);
