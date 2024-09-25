@@ -137,14 +137,13 @@ impl Processor {
         }
         state_header.pack_into_slice(&mut data);
 
-        let offset = VestingScheduleHeader::LEN;
         let mut total_amount: u64 = 0;
 
         let state_schedule = VestingSchedule {
             release_time: schedule.release_time,
             amount: schedule.amount,
         };
-        state_schedule.pack_into_slice(&mut data[offset..]);
+        state_schedule.pack_into_slice(&mut data[VestingScheduleHeader::LEN..]);
         let delta = total_amount.checked_add(schedule.amount);
         match delta {
             Some(n) => total_amount = n,
