@@ -133,11 +133,10 @@ impl Processor {
 
         let mut data = vesting_account.data.borrow_mut();
         if data.len() != VestingScheduleHeader::LEN + VestingSchedule::LEN {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(ProgramError::InvalidAccountData)
         }
         state_header.pack_into_slice(&mut data);
 
-        let offset = VestingScheduleHeader::LEN;
         let mut total_amount: u64 = 0;
 
         // NOTE: validate time delta to be 0 (unlocked), or a set of predefined values (1 month, 3 months, ...)
@@ -163,7 +162,7 @@ impl Processor {
             release_time: release_time,
             amount: schedule.amount,
         };
-        state_schedule.pack_into_slice(&mut data[offset..]);
+        state_schedule.pack_into_slice(&mut data[VestingScheduleHeader::LEN..]);
         let delta = total_amount.checked_add(schedule.amount);
         match delta {
             Some(n) => total_amount = n,
@@ -363,7 +362,9 @@ impl Processor {
         let instruction = VestingInstruction::unpack(instruction_data)?;
         msg!("Instruction unpacked");
         match instruction {
-            VestingInstruction::Init { seeds } => {
+            VestingInstruction::Init {
+                seeds,
+            } => {
                 msg!("Instruction: Init");
                 Self::process_init(program_id, accounts, seeds)
             }

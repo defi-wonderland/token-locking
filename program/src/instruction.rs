@@ -29,11 +29,9 @@ impl Arbitrary for VestingInstruction {
                 let key_bytes: [u8; 32] = u.arbitrary()?;
                 let mint_address: Pubkey = Pubkey::new_from_array(key_bytes);
                 let key_bytes: [u8; 32] = u.arbitrary()?;
-                let destination_token_address: Pubkey = Pubkey::new_from_array(key_bytes);
                 return Ok(Self::Create {
                     seeds,
                     mint_address,
-                    destination_token_address,
                     schedule: schedule,
                 });
             }

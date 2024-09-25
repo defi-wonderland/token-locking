@@ -91,16 +91,14 @@ impl IsInitialized for VestingScheduleHeader {
 }
 
 pub fn unpack_schedule(input: &[u8]) -> Result<VestingSchedule, ProgramError> {
-    let offset = 0;
     let output: VestingSchedule = VestingSchedule::unpack_from_slice(
-        &input[offset..offset + VestingSchedule::LEN],
+        &input[..VestingSchedule::LEN],
     )?;
     Ok(output)
 }
 
 pub fn pack_schedule_into_slice(schedule: VestingSchedule, target: &mut [u8]) {
-    let offset = 0;
-    schedule.pack_into_slice(&mut target[offset..]);
+    schedule.pack_into_slice(target);
 }
 
 #[cfg(test)]
