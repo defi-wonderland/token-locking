@@ -4,7 +4,7 @@ use solana_program::{
     instruction::{AccountMeta, Instruction},
     msg,
     program_error::ProgramError,
-    pubkey::Pubkey
+    pubkey::Pubkey,
 };
 
 use std::convert::TryInto;
@@ -20,9 +20,7 @@ impl Arbitrary for VestingInstruction {
         let choice = u.choose(&[0, 1, 2, 3])?;
         match choice {
             0 => {
-                return Ok(Self::Init {
-                    seeds,
-                });
+                return Ok(Self::Init { seeds });
             }
             1 => {
                 let schedule: [Schedule; 10] = u.arbitrary()?;
@@ -93,7 +91,7 @@ pub enum VestingInstruction {
     ///   2. `[writable]` The vesting spl-token account
     ///   3. `[writable]` The destination spl-token account
     Unlock { seeds: [u8; 32] },
-    
+
     /// Initializes the unlocking period - can only be invoked by the program itself
     /// Accounts expected by this instruction:
     ///
@@ -116,9 +114,7 @@ impl VestingInstruction {
                     .get(..32)
                     .and_then(|slice| slice.try_into().ok())
                     .unwrap();
-                Self::Init {
-                    seeds,
-                }
+                Self::Init { seeds }
             }
             1 => {
                 let seeds: [u8; 32] = rest
@@ -141,10 +137,7 @@ impl VestingInstruction {
                     .and_then(|slice| slice.try_into().ok())
                     .map(u64::from_le_bytes)
                     .ok_or(InvalidInstruction)?;
-                let schedule = Schedule {
-                    time_delta,
-                    amount,
-                };
+                let schedule = Schedule { time_delta, amount };
                 Self::Create {
                     seeds,
                     mint_address,
@@ -171,9 +164,7 @@ impl VestingInstruction {
     pub fn pack(&self) -> Vec<u8> {
         let mut buf = Vec::with_capacity(size_of::<Self>());
         match self {
-            &Self::Init {
-                seeds,
-            } => {
+            &Self::Init { seeds } => {
                 buf.push(0);
                 buf.extend_from_slice(&seeds);
             }
@@ -210,10 +201,7 @@ pub fn init(
     vesting_account: &Pubkey,
     seeds: [u8; 32],
 ) -> Result<Instruction, ProgramError> {
-    let data = VestingInstruction::Init {
-        seeds,
-    }
-    .pack();
+    let data = VestingInstruction::Init { seeds }.pack();
     let accounts = vec![
         AccountMeta::new_readonly(*system_program_id, false),
         AccountMeta::new_readonly(*rent_program_id, false),
@@ -335,9 +323,7 @@ mod test {
             VestingInstruction::unpack(&original_unlock.pack()).unwrap()
         );
 
-        let original_init = VestingInstruction::Init {
-            seeds: [50u8; 32],
-        };
+        let original_init = VestingInstruction::Init { seeds: [50u8; 32] };
         assert_eq!(
             original_init,
             VestingInstruction::unpack(&original_init.pack()).unwrap()

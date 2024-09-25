@@ -36,15 +36,15 @@ impl Pack for VestingScheduleHeader {
 
         target[64] = self.is_initialized as u8;
     }
-    
+
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         if src.len() < 65 {
-            return Err(ProgramError::InvalidAccountData)
+            return Err(ProgramError::InvalidAccountData);
         }
-        let destination_address = Pubkey::try_from(&src[..32])
-            .map_err(|_| ProgramError::InvalidArgument)?;
-        let mint_address = Pubkey::try_from(&src[32..64])
-            .map_err(|_| ProgramError::InvalidArgument)?;
+        let destination_address =
+            Pubkey::try_from(&src[..32]).map_err(|_| ProgramError::InvalidArgument)?;
+        let mint_address =
+            Pubkey::try_from(&src[32..64]).map_err(|_| ProgramError::InvalidArgument)?;
         let is_initialized = src[64] == 1;
         Ok(Self {
             destination_address,
@@ -73,7 +73,7 @@ impl Pack for VestingSchedule {
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         if src.len() < 16 {
-            return Err(ProgramError::InvalidAccountData)
+            return Err(ProgramError::InvalidAccountData);
         }
         let release_time = u64::from_le_bytes(src[0..8].try_into().unwrap());
         let amount = u64::from_le_bytes(src[8..16].try_into().unwrap());
@@ -91,9 +91,8 @@ impl IsInitialized for VestingScheduleHeader {
 }
 
 pub fn unpack_schedule(input: &[u8]) -> Result<VestingSchedule, ProgramError> {
-    let output: VestingSchedule = VestingSchedule::unpack_from_slice(
-        &input[..VestingSchedule::LEN],
-    )?;
+    let output: VestingSchedule =
+        VestingSchedule::unpack_from_slice(&input[..VestingSchedule::LEN])?;
     Ok(output)
 }
 
