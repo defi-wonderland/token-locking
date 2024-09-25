@@ -18,8 +18,8 @@ use spl_token::{instruction::transfer, state::Account};
 
 use crate::{
     error::VestingError,
-    instruction::{Schedule, VestingInstruction, SCHEDULE_SIZE},
-    state::{pack_schedules_into_slice, unpack_schedules, VestingSchedule, VestingScheduleHeader},
+    instruction::{Schedule, VestingInstruction},
+    state::{pack_schedule_into_slice, unpack_schedule, VestingSchedule, VestingScheduleHeader},
 };
 
 pub struct Processor {}
@@ -28,8 +28,7 @@ impl Processor {
     pub fn process_init(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
-        seeds: [u8; 32],
-        schedules: u32
+        seeds: [u8; 32]
     ) -> ProgramResult {
         let accounts_iter = &mut accounts.iter();
 
@@ -47,7 +46,7 @@ impl Processor {
             return Err(ProgramError::InvalidArgument);
         }
 
-        let state_size = (schedules as usize) * VestingSchedule::LEN + VestingScheduleHeader::LEN;
+        let state_size = VestingSchedule::LEN + VestingScheduleHeader::LEN;
 
         let init_vesting_account = create_account(
             &payer.key,
@@ -74,7 +73,7 @@ impl Processor {
         accounts: &[AccountInfo],
         seeds: [u8; 32],
         mint_address: &Pubkey,
-        schedules: Vec<Schedule>,
+        schedule: Schedule,
     ) -> ProgramResult {
         let accounts_iter = &mut accounts.iter();
 
@@ -133,26 +132,22 @@ impl Processor {
         };
 
         let mut data = vesting_account.data.borrow_mut();
-        if data.len() != VestingScheduleHeader::LEN + schedules.len() * VestingSchedule::LEN {
+        if data.len() != VestingScheduleHeader::LEN + VestingSchedule::LEN {
             return Err(ProgramError::InvalidAccountData)
         }
         state_header.pack_into_slice(&mut data);
 
-        let mut offset = VestingScheduleHeader::LEN;
         let mut total_amount: u64 = 0;
 
-        for s in schedules.iter() {
-            let state_schedule = VestingSchedule {
-                release_time: s.release_time,
-                amount: s.amount,
-            };
-            state_schedule.pack_into_slice(&mut data[offset..]);
-            let delta = total_amount.checked_add(s.amount);
-            match delta {
-                Some(n) => total_amount = n,
-                None => return Err(ProgramError::InvalidInstructionData), // Total amount overflows u64
-            }
-            offset += SCHEDULE_SIZE;
+        let state_schedule = VestingSchedule {
+            release_time: schedule.release_time,
+            amount: schedule.amount,
+        };
+        state_schedule.pack_into_slice(&mut data[VestingScheduleHeader::LEN..]);
+        let delta = total_amount.checked_add(schedule.amount);
+        match delta {
+            Some(n) => total_amount = n,
+            None => return Err(ProgramError::InvalidInstructionData), // Total amount overflows u64
         }
         
         if Account::unpack(&source_token_account.data.borrow())?.amount < total_amount {
@@ -224,14 +219,13 @@ impl Processor {
         // Unlock the schedules that have reached maturity
         let clock = Clock::from_account_info(&clock_sysvar_account)?;
         let mut total_amount_to_transfer = 0;
-        let mut schedules = unpack_schedules(&packed_state.borrow()[VestingScheduleHeader::LEN..])?;
+        let mut schedule = unpack_schedule(&packed_state.borrow()[VestingScheduleHeader::LEN..])?;
 
-        for s in schedules.iter_mut() {
-            if clock.unix_timestamp as u64 >= s.release_time {
-                total_amount_to_transfer += s.amount;
-                s.amount = 0;
-            }
+        if clock.unix_timestamp as u64 >= schedule.release_time {
+            total_amount_to_transfer += schedule.amount;
+            schedule.amount = 0;
         }
+
         if total_amount_to_transfer == 0 {
             msg!("Vesting contract has not yet reached release time");
             return Err(ProgramError::InvalidArgument);
@@ -258,8 +252,8 @@ impl Processor {
         )?;
 
         // Reset released amounts to 0. This makes the simple unlock safe with complex scheduling contracts
-        pack_schedules_into_slice(
-            schedules,
+        pack_schedule_into_slice(
+            schedule,
             &mut packed_state.borrow_mut()[VestingScheduleHeader::LEN..],
         );
 
@@ -277,10 +271,9 @@ impl Processor {
         match instruction {
             VestingInstruction::Init {
                 seeds,
-                number_of_schedules,
             } => {
                 msg!("Instruction: Init");
-                Self::process_init(program_id, accounts, seeds, number_of_schedules)
+                Self::process_init(program_id, accounts, seeds)
             }
             VestingInstruction::Unlock { seeds } => {
                 msg!("Instruction: Unlock");
@@ -289,7 +282,7 @@ impl Processor {
             VestingInstruction::Create {
                 seeds,
                 mint_address,
-                schedules,
+                schedule,
             } => {
                 msg!("Instruction: Create Schedule");
                 Self::process_create(
@@ -297,7 +290,7 @@ impl Processor {
                     accounts,
                     seeds,
                     &mint_address,
-                    schedules,
+                    schedule,
                 )
             }
         }

@@ -90,30 +90,20 @@ impl IsInitialized for VestingScheduleHeader {
     }
 }
 
-pub fn unpack_schedules(input: &[u8]) -> Result<Vec<VestingSchedule>, ProgramError> {
-    let number_of_schedules = input.len() / VestingSchedule::LEN;
-    let mut output: Vec<VestingSchedule> = Vec::with_capacity(number_of_schedules);
-    let mut offset = 0;
-    for _ in 0..number_of_schedules {
-        output.push(VestingSchedule::unpack_from_slice(
-            &input[offset..offset + VestingSchedule::LEN],
-        )?);
-        offset += VestingSchedule::LEN;
-    }
+pub fn unpack_schedule(input: &[u8]) -> Result<VestingSchedule, ProgramError> {
+    let output: VestingSchedule = VestingSchedule::unpack_from_slice(
+        &input[..VestingSchedule::LEN],
+    )?;
     Ok(output)
 }
 
-pub fn pack_schedules_into_slice(schedules: Vec<VestingSchedule>, target: &mut [u8]) {
-    let mut offset = 0;
-    for s in schedules.iter() {
-        s.pack_into_slice(&mut target[offset..]);
-        offset += VestingSchedule::LEN;
-    }
+pub fn pack_schedule_into_slice(schedule: VestingSchedule, target: &mut [u8]) {
+    schedule.pack_into_slice(target);
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{unpack_schedules, VestingSchedule, VestingScheduleHeader};
+    use super::{unpack_schedule, VestingSchedule, VestingScheduleHeader};
     use solana_program::{program_pack::Pack, pubkey::Pubkey};
 
     #[test]
@@ -123,40 +113,31 @@ mod tests {
             mint_address: Pubkey::new_unique(),
             is_initialized: true,
         };
-        let schedule_state_0 = VestingSchedule {
+        let schedule_state = VestingSchedule {
             release_time: 30767976,
             amount: 969,
         };
-        let schedule_state_1 = VestingSchedule {
-            release_time: 32767076,
-            amount: 420,
-        };
-        let state_size = VestingScheduleHeader::LEN + 2 * VestingSchedule::LEN;
-        let mut state_array = [0u8; 97];
+        let state_size = VestingScheduleHeader::LEN + VestingSchedule::LEN;
+        let mut state_array = [0u8; 81];
         header_state.pack_into_slice(&mut state_array[..VestingScheduleHeader::LEN]);
-        schedule_state_0.pack_into_slice(
+        schedule_state.pack_into_slice(
             &mut state_array
                 [VestingScheduleHeader::LEN..VestingScheduleHeader::LEN + VestingSchedule::LEN],
         );
-        schedule_state_1
-            .pack_into_slice(&mut state_array[VestingScheduleHeader::LEN + VestingSchedule::LEN..]);
         let packed = Vec::from(state_array);
         let mut expected = Vec::with_capacity(state_size);
         expected.extend_from_slice(&header_state.destination_address.to_bytes());
         expected.extend_from_slice(&header_state.mint_address.to_bytes());
         expected.extend_from_slice(&[header_state.is_initialized as u8]);
-        expected.extend_from_slice(&schedule_state_0.release_time.to_le_bytes());
-        expected.extend_from_slice(&schedule_state_0.amount.to_le_bytes());
-        expected.extend_from_slice(&schedule_state_1.release_time.to_le_bytes());
-        expected.extend_from_slice(&schedule_state_1.amount.to_le_bytes());
+        expected.extend_from_slice(&schedule_state.release_time.to_le_bytes());
+        expected.extend_from_slice(&schedule_state.amount.to_le_bytes());
 
         assert_eq!(expected, packed);
         assert_eq!(packed.len(), state_size);
         let unpacked_header =
             VestingScheduleHeader::unpack(&packed[..VestingScheduleHeader::LEN]).unwrap();
         assert_eq!(unpacked_header, header_state);
-        let unpacked_schedules = unpack_schedules(&packed[VestingScheduleHeader::LEN..]).unwrap();
-        assert_eq!(unpacked_schedules[0], schedule_state_0);
-        assert_eq!(unpacked_schedules[1], schedule_state_1);
+        let unpacked_schedules = unpack_schedule(&packed[VestingScheduleHeader::LEN..]).unwrap();
+        assert_eq!(unpacked_schedules, schedule_state);
     }
 }
