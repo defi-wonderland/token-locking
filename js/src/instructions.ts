@@ -12,14 +12,11 @@ export function createInitInstruction(
   vestingProgramId: PublicKey,
   payerKey: PublicKey,
   vestingAccountKey: PublicKey,
-  seeds: Array<Buffer | Uint8Array>,
-  numberOfSchedules: number,
+  seeds: Array<Buffer | Uint8Array>
 ): TransactionInstruction {
   let buffers = [
     Buffer.from(Int8Array.from([0]).buffer),
     Buffer.concat(seeds),
-    // @ts-ignore
-    new Numberu32(numberOfSchedules).toBuffer(),
   ];
 
   const data = Buffer.concat(buffers);
@@ -62,7 +59,7 @@ export function createCreateInstruction(
   sourceTokenAccountKey: PublicKey,
   destinationTokenAccountKey: PublicKey,
   mintAddress: PublicKey,
-  schedules: Array<Schedule>,
+  schedule: Schedule,
   seeds: Array<Buffer | Uint8Array>,
 ): TransactionInstruction {
   let buffers = [
@@ -72,9 +69,7 @@ export function createCreateInstruction(
     destinationTokenAccountKey.toBuffer(),
   ];
 
-  schedules.forEach(s => {
-    buffers.push(s.toBuffer());
-  });
+  buffers.push(schedule.toBuffer());
 
   const data = Buffer.concat(buffers);
   const keys = [
@@ -122,6 +117,54 @@ export function createUnlockInstruction(
 ): TransactionInstruction {
   const data = Buffer.concat([
     Buffer.from(Int8Array.from([2]).buffer),
+    Buffer.concat(seeds),
+  ]);
+
+  const keys = [
+    {
+      pubkey: tokenProgramId,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: clockSysvarId,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: vestingAccountKey,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: vestingTokenAccountKey,
+      isSigner: false,
+      isWritable: true,
+    },
+    {
+      pubkey: destinationTokenAccountKey,
+      isSigner: false,
+      isWritable: true,
+    },
+  ];
+  return new TransactionInstruction({
+    keys,
+    programId: vestingProgramId,
+    data,
+  });
+}
+
+export function createInitializeUnlockInstruction(
+  vestingProgramId: PublicKey,
+  tokenProgramId: PublicKey,
+  clockSysvarId: PublicKey,
+  vestingAccountKey: PublicKey,
+  vestingTokenAccountKey: PublicKey,
+  destinationTokenAccountKey: PublicKey,
+  seeds: Array<Buffer | Uint8Array>,
+): TransactionInstruction {
+  const data = Buffer.concat([
+    Buffer.from(Int8Array.from([3]).buffer),
     Buffer.concat(seeds),
   ]);
 

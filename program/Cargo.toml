@@ -28,8 +28,9 @@ arbitrary = { version = "0.4", features = ["derive"], optional = true }
 honggfuzz = { version = "0.5", optional = true }
 
 [dev-dependencies]
-solana-sdk = "1.5.6"
-solana-program-test = "1.5.6"
+solana-sdk = "1.18.23"
+solana-program-test = "1.18.23"
+solana-test-framework = { git = "https://github.com/halbornteam/solana-test-framework", branch = "solana1.18" }
 tokio = { version = "1.0", features = ["macros"]}
 
 [lib]
