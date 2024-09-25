@@ -11,7 +11,7 @@ use solana_sdk::{signature::Keypair, signature::Signer, system_instruction, tran
 use arbitrary::Arbitrary;
 use std::collections::HashMap;
 use token_vesting::{instruction::{Schedule, VestingInstruction}, processor::Processor};
-use token_vesting::instruction::{init, unlock, change_destination, create};
+use token_vesting::instruction::{init, unlock, create};
 use solana_sdk::{account::Account, instruction::InstructionError, transaction::TransactionError};
 struct TokenVestingEnv {
     system_program_id: Pubkey,
@@ -327,59 +327,6 @@ fn run_fuzz_instruction(
                 clone_keypair(&token_vesting_testenv.mint_authority),
                 clone_keypair(source_token_account_owner_key),
                 ]);
-            },
-
-            FuzzInstruction {
-                instruction: VestingInstruction::ChangeDestination{ .. },
-                ..
-            } => {
-                let mut instructions_acc = vec![init(
-                    &token_vesting_testenv.system_program_id,
-                    &token_vesting_testenv.rent_program_id,
-                    &token_vesting_testenv.vesting_program_id,
-                    &correct_payer.pubkey(),
-                    &correct_vesting_account_key,
-                    correct_seeds,
-                    fuzz_instruction.number_of_schedules as u32
-                ).unwrap()];
-                let mut create_instructions = create_fuzzinstruction(
-                    token_vesting_testenv,
-                    fuzz_instruction,
-                    correct_payer,
-                    &correct_source_token_account_key,
-                    source_token_account_owner_key,
-                    destination_token_key,
-                    &destination_token_owner_key.pubkey(),
-                    &correct_vesting_account_key,
-                    &correct_vesting_token_key,
-                    correct_seeds,
-                    mint_key,
-                    fuzz_instruction.source_token_amount
-                );
-                instructions_acc.append(&mut create_instructions);
-
-                let new_destination_instruction = create_associated_token_account(
-                    &correct_payer.pubkey(),
-                    &Pubkey::new_unique(), // Arbitrary
-                    &mint_key.pubkey()
-                );
-                instructions_acc.push(new_destination_instruction);
-
-                let change_instruction = change_destination(
-                    &token_vesting_testenv.vesting_program_id,
-                    &correct_vesting_account_key,
-                    &destination_token_owner_key.pubkey(),
-                    &destination_token_key,
-                    new_destination_token_key,
-                    correct_seeds
-                ).unwrap();
-                instructions_acc.push(change_instruction);
-                return (instructions_acc, vec![
-                    clone_keypair(mint_key),
-                    clone_keypair(&token_vesting_testenv.mint_authority),
-                    clone_keypair(source_token_account_owner_key),
-                    clone_keypair(destination_token_owner_key),
-                ]);
             }
         };
 
@@ -440,24 +387,6 @@ fn run_fuzz_instruction(
                 return (
                     vec![unlock_instruction],
                     vec![]
-                );
-            },
-
-            FuzzInstruction {
-                instruction: VestingInstruction::ChangeDestination{ .. },
-                ..
-            } => {
-                let change_instruction = change_destination(
-                    &token_vesting_testenv.vesting_program_id,
-                    vesting_account_key,
-                    &destination_token_owner_key.pubkey(),
-                    &destination_token_key,
-                    new_destination_token_key,
-                    fuzz_instruction.seeds,
-                ).unwrap();
-                return (
-                    vec![change_instruction],
-                    vec![clone_keypair(destination_token_owner_key)]
                 );
             }
         };

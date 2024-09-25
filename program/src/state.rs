@@ -4,7 +4,7 @@ use solana_program::{
     pubkey::Pubkey,
 };
 
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 #[derive(Debug, PartialEq)]
 pub struct VestingSchedule {
     pub release_time: u64,
@@ -36,13 +36,15 @@ impl Pack for VestingScheduleHeader {
 
         target[64] = self.is_initialized as u8;
     }
-
+    
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
         if src.len() < 65 {
             return Err(ProgramError::InvalidAccountData)
         }
-        let destination_address = Pubkey::new(&src[..32]);
-        let mint_address = Pubkey::new(&src[32..64]);
+        let destination_address = Pubkey::try_from(&src[..32])
+            .map_err(|_| ProgramError::InvalidArgument)?;
+        let mint_address = Pubkey::try_from(&src[32..64])
+            .map_err(|_| ProgramError::InvalidArgument)?;
         let is_initialized = src[64] == 1;
         Ok(Self {
             destination_address,
