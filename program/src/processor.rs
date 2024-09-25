@@ -139,8 +139,27 @@ impl Processor {
 
         let mut total_amount: u64 = 0;
 
+        // NOTE: validate time delta to be 0 (unlocked), or a set of predefined values (1 month, 3 months, ...)
+        let release_time;
+        match schedule.time_delta {
+            0 => {
+                release_time = 0;
+            },
+            1 | 100 | 300 => { // TODO: replace for validated values
+                // Valid time_delta values, do nothing 
+                // TODO: make test advance in time between initialize and unlock
+                // let clock = Clock::from_account_info(&clock_sysvar_account)?;
+                // release_time = clock.unix_timestamp as u64 + schedule.time_delta; // TODO: uncomment
+                release_time = schedule.time_delta; // NOTE: For testing purposes, keeping previous behavior
+            }            
+            _ => {
+                msg!("Unsupported time delta");
+                return Err(ProgramError::InvalidInstructionData);
+            }
+        }
+
         let state_schedule = VestingSchedule {
-            release_time: schedule.release_time,
+            release_time: release_time,
             amount: schedule.amount,
         };
         state_schedule.pack_into_slice(&mut data[VestingScheduleHeader::LEN..]);

@@ -46,7 +46,7 @@ impl Arbitrary for VestingInstruction {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Schedule {
     // Schedule release time in unix timestamp
-    pub release_time: u64,
+    pub time_delta: u64,
     pub amount: u64,
 }
 
@@ -131,7 +131,7 @@ impl VestingInstruction {
                     .map(Pubkey::new_from_array)
                     .ok_or(InvalidInstruction)?;
                 let offset = 64;
-                let release_time = rest
+                let time_delta = rest
                     .get(offset..offset + 8)
                     .and_then(|slice| slice.try_into().ok())
                     .map(u64::from_le_bytes)
@@ -142,7 +142,7 @@ impl VestingInstruction {
                     .map(u64::from_le_bytes)
                     .ok_or(InvalidInstruction)?;
                 let schedule = Schedule {
-                    release_time,
+                    time_delta,
                     amount,
                 };
                 Self::Create {
@@ -185,7 +185,7 @@ impl VestingInstruction {
                 buf.push(1);
                 buf.extend_from_slice(seeds);
                 buf.extend_from_slice(&mint_address.to_bytes());
-                buf.extend_from_slice(&schedule.release_time.to_le_bytes());
+                buf.extend_from_slice(&schedule.time_delta.to_le_bytes());
                 buf.extend_from_slice(&schedule.amount.to_le_bytes());
             }
             &Self::Unlock { seeds } => {
@@ -321,7 +321,7 @@ mod test {
             seeds: [50u8; 32],
             schedule: Schedule {
                 amount: 42,
-                release_time: 250,
+                time_delta: 250,
             },
             mint_address: mint_address.clone(),
         };
