@@ -8,7 +8,7 @@ use solana_program::{hash::Hash,
     system_program
 };
 use solana_program_test::{processor, ProgramTest};
-use solana_sdk::{account::Account, keyed_account, signature::Keypair, signature::Signer, system_instruction, transaction::Transaction};
+use solana_sdk::{account::Account, signature::Keypair, signature::Signer, system_instruction, transaction::Transaction};
 use token_vesting::{entrypoint::process_instruction, instruction::Schedule};
 use token_vesting::instruction::{init, unlock, change_destination, create};
 use spl_token::{self, instruction::{initialize_mint, initialize_account, mint_to}};
