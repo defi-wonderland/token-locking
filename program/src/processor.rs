@@ -73,7 +73,6 @@ impl Processor {
         accounts: &[AccountInfo],
         seeds: [u8; 32],
         mint_address: &Pubkey,
-        destination_token_address: &Pubkey,
         schedule: Schedule,
     ) -> ProgramResult {
         let accounts_iter = &mut accounts.iter();
@@ -127,7 +126,7 @@ impl Processor {
         }
 
         let state_header = VestingScheduleHeader {
-            destination_address: *destination_token_address,
+            destination_address: *source_token_account.key,
             mint_address: *mint_address,
             is_initialized: true,
         };
@@ -355,56 +354,6 @@ impl Processor {
         Ok(())
     }
 
-    pub fn process_change_destination(
-        program_id: &Pubkey,
-        accounts: &[AccountInfo],
-        seeds: [u8; 32],
-    ) -> ProgramResult {
-        let accounts_iter = &mut accounts.iter();
-
-        let vesting_account = next_account_info(accounts_iter)?;
-        let destination_token_account = next_account_info(accounts_iter)?;
-        let destination_token_account_owner = next_account_info(accounts_iter)?;
-        let new_destination_token_account = next_account_info(accounts_iter)?;
-
-        if vesting_account.data.borrow().len() < VestingScheduleHeader::LEN {
-            return Err(ProgramError::InvalidAccountData);
-        }
-        let vesting_account_key = Pubkey::create_program_address(&[&seeds], program_id)?;
-        let state = VestingScheduleHeader::unpack(
-            &vesting_account.data.borrow()[..VestingScheduleHeader::LEN],
-        )?;
-
-        if vesting_account_key != *vesting_account.key {
-            msg!("Invalid vesting account key");
-            return Err(ProgramError::InvalidArgument);
-        }
-
-        if state.destination_address != *destination_token_account.key {
-            msg!("Contract destination account does not matched provided account");
-            return Err(ProgramError::InvalidArgument);
-        }
-
-        if !destination_token_account_owner.is_signer {
-            msg!("Destination token account owner should be a signer.");
-            return Err(ProgramError::InvalidArgument);
-        }
-
-        let destination_token_account = Account::unpack(&destination_token_account.data.borrow())?;
-
-        if destination_token_account.owner != *destination_token_account_owner.key {
-            msg!("The current destination token account isn't owned by the provided owner");
-            return Err(ProgramError::InvalidArgument);
-        }
-
-        let mut new_state = state;
-        new_state.destination_address = *new_destination_token_account.key;
-        new_state
-            .pack_into_slice(&mut vesting_account.data.borrow_mut()[..VestingScheduleHeader::LEN]);
-
-        Ok(())
-    }
-
     pub fn process_instruction(
         program_id: &Pubkey,
         accounts: &[AccountInfo],
@@ -426,14 +375,9 @@ impl Processor {
                 msg!("Instruction: InitializeUnlock");
                 Self::process_initialize_unlock(program_id, accounts, seeds)
             }
-            VestingInstruction::ChangeDestination { seeds } => {
-                msg!("Instruction: Change Destination");
-                Self::process_change_destination(program_id, accounts, seeds)
-            }
             VestingInstruction::Create {
                 seeds,
                 mint_address,
-                destination_token_address,
                 schedule,
             } => {
                 msg!("Instruction: Create Schedule");
@@ -442,7 +386,6 @@ impl Processor {
                     accounts,
                     seeds,
                     &mint_address,
-                    &destination_token_address,
                     schedule,
                 )
             }

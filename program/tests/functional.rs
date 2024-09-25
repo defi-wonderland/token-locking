@@ -5,15 +5,9 @@ use solana_program::{
     hash::Hash, pubkey::Pubkey, rent::Rent, system_program, sysvar,
 };
 use solana_program_test::{processor, ProgramTest, ProgramTestContext};
-use solana_sdk::{
-    account::Account, signature::Keypair, signature::Signer, system_instruction,
-    transaction::Transaction,
-};
+use solana_sdk::{account::Account, signature::Keypair, signature::Signer, system_instruction,transaction::Transaction};
 use solana_test_framework::ProgramTestContextExtension;
-use spl_token::{
-    self,
-    instruction::{initialize_account, initialize_mint, mint_to},
-};
+use spl_token::{self,instruction::{initialize_account, initialize_mint, mint_to}};
 use token_vesting::instruction::{create, init, initialize_unlock, unlock};
 use token_vesting::{entrypoint::process_instruction, instruction::Schedule};
 
@@ -26,12 +20,6 @@ async fn test_token_vesting() {
 
     let source_account = Keypair::new();
     let source_token_account = Keypair::new();
-
-    let destination_account = Keypair::new();
-    let destination_token_account = Keypair::new();
-
-    let new_destination_account = Keypair::new();
-    let new_destination_token_account = Keypair::new();
 
     let mut seeds = [42u8; 32];
     let (vesting_account_key, bump) = Pubkey::find_program_address(&[&seeds[..31]], &program_id);
@@ -72,15 +60,12 @@ async fn test_token_vesting() {
         .unwrap();
 
     // Initialize the token accounts
-    banks_client
-        .process_transaction(mint_init_transaction(
+    banks_client.process_transaction(mint_init_transaction(
             &payer,
             &mint,
             &mint_authority,
             recent_blockhash,
-        ))
-        .await
-        .unwrap();
+        )).await.unwrap();
 
     banks_client
         .process_transaction(create_token_account(
@@ -99,26 +84,6 @@ async fn test_token_vesting() {
             recent_blockhash,
             &vesting_token_account,
             &vesting_account_key,
-        ))
-        .await
-        .unwrap();
-    banks_client
-        .process_transaction(create_token_account(
-            &payer,
-            &mint,
-            recent_blockhash,
-            &destination_token_account,
-            &destination_account.pubkey(),
-        ))
-        .await
-        .unwrap();
-    banks_client
-        .process_transaction(create_token_account(
-            &payer,
-            &mint,
-            recent_blockhash,
-            &new_destination_token_account,
-            &new_destination_account.pubkey(),
         ))
         .await
         .unwrap();
@@ -147,7 +112,6 @@ async fn test_token_vesting() {
             &vesting_token_account.pubkey(),
             &source_account.pubkey(),
             &source_token_account.pubkey(),
-            &destination_token_account.pubkey(),
             &mint.pubkey(),
             schedule,
             seeds.clone(),
@@ -159,7 +123,7 @@ async fn test_token_vesting() {
             &sysvar::clock::id(),
             &vesting_account_key,
             &vesting_token_account.pubkey(),
-            &destination_token_account.pubkey(),
+            &source_token_account.pubkey(),
             seeds.clone(),
         )
         .unwrap(),
@@ -197,12 +161,6 @@ async fn test_token_unlocking() {
 
     let source_account = Keypair::new();
     let source_token_account = Keypair::new();
-
-    let destination_account = Keypair::new();
-    let destination_token_account = Keypair::new();
-
-    let new_destination_account = Keypair::new();
-    let new_destination_token_account = Keypair::new();
 
     let mut seeds = [42u8; 32];
     let (vesting_account_key, bump) = Pubkey::find_program_address(&[&seeds[..31]], &program_id);
@@ -279,26 +237,6 @@ async fn test_token_unlocking() {
             ))
             .await
             .unwrap();
-        banks_client
-            .process_transaction(create_token_account(
-                &payer,
-                &mint,
-                recent_blockhash,
-                &destination_token_account,
-                &destination_account.pubkey(),
-            ))
-            .await
-            .unwrap();
-        banks_client
-            .process_transaction(create_token_account(
-                &payer,
-                &mint,
-                recent_blockhash,
-                &new_destination_token_account,
-                &new_destination_account.pubkey(),
-            ))
-            .await
-            .unwrap();
 
         // Create and process the vesting transactions
         let setup_instructions = [mint_to(
@@ -324,7 +262,6 @@ async fn test_token_unlocking() {
                 &vesting_token_account.pubkey(),
                 &source_account.pubkey(),
                 &source_token_account.pubkey(),
-                &destination_token_account.pubkey(),
                 &mint.pubkey(),
                 schedule,
                 seeds.clone(),
@@ -336,7 +273,7 @@ async fn test_token_unlocking() {
                 &sysvar::clock::id(),
                 &vesting_account_key,
                 &vesting_token_account.pubkey(),
-                &destination_token_account.pubkey(),
+                &source_token_account.pubkey(),
                 seeds.clone(),
             )
             .unwrap(),
@@ -347,7 +284,7 @@ async fn test_token_unlocking() {
                 &sysvar::clock::id(),
                 &vesting_account_key,
                 &vesting_token_account.pubkey(),
-                &destination_token_account.pubkey(),
+                &source_token_account.pubkey(),
                 seeds.clone(),
             )
             .unwrap()
@@ -389,7 +326,7 @@ async fn test_token_unlocking() {
     //         &sysvar::clock::id(),
     //         &vesting_account_key,
     //         &vesting_token_account.pubkey(),
-    //         &destination_token_account.pubkey(),
+    //         &source_token_account.pubkey(),
     //         seeds.clone(),
     //     )
     //     .unwrap()];
