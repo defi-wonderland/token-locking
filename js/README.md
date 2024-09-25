@@ -22,7 +22,6 @@ The code allows you to
 
 - Create vesting instructions for any SPL token: `createCreateInstruction`
 - Create unlock instructions: `createUnlockInstruction`
-- Change the destination of the vested tokens: `createChangeDestinationInstruction`
 
 (To import Solana accounts created with [Sollet](https://sollet.io) you can use `getAccountFromSeed`)
 
@@ -37,7 +36,4 @@ Fetching contract  r2p2mLJvyrTzetxxsttQ54CS1m18zMgYqKSRzxP9WpE
 ✅ Successfully created unlocking instructions
 🚚 Transaction signature: 2Vg3W1w8WBdRAWBEwFTn2BtMkKPD3Xor7SRvzC193UnsUnhmneUChPHe7vLF9Lfw9BKxWH5JbbJmnda4XztHMVHz
 
-Fetching contract  r2p2mLJvyrTzetxxsttQ54CS1m18zMgYqKSRzxP9WpE
-✅ Successfully changed destination
-🚚 Transaction signature: 4tgPgCdM5ubaSKNLKD1WrfAJPZgRajxRSnmcPkHcN1TCeCRmq3cUCYVdCzsYwr63JRf4D2K1UZnt8rwu2pkGxeYe
 ```

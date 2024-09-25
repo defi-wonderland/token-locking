@@ -10,7 +10,7 @@ use solana_program::{hash::Hash,
 use solana_program_test::{processor, ProgramTest};
 use solana_sdk::{account::Account, signature::Keypair, signature::Signer, system_instruction, transaction::Transaction};
 use token_vesting::{entrypoint::process_instruction, instruction::Schedule};
-use token_vesting::instruction::{init, unlock, change_destination, create};
+use token_vesting::instruction::{init, unlock, create};
 use spl_token::{self, instruction::{initialize_mint, initialize_account, mint_to}};
 
 #[tokio::test]
@@ -138,17 +138,6 @@ async fn test_token_vesting() {
             seeds.clone()
         ).unwrap()
     ];
-
-    let change_destination_instructions = [
-        change_destination(
-            &program_id,
-            &vesting_account_key,
-            &destination_account.pubkey(),
-            &destination_token_account.pubkey(),
-            &new_destination_token_account.pubkey(),
-            seeds.clone()
-        ).unwrap()
-    ];
     
     // Process transaction on test network
     let mut setup_transaction = Transaction::new_with_payer(
@@ -179,21 +168,6 @@ async fn test_token_vesting() {
     );
     
     banks_client.process_transaction(test_transaction).await.unwrap();
-    
-    let mut change_destination_transaction = Transaction::new_with_payer(
-        &change_destination_instructions, 
-        Some(&payer.pubkey())
-    );
-
-    change_destination_transaction.partial_sign(
-        &[
-            &payer,
-            &destination_account
-        ], 
-        recent_blockhash
-    );
-
-    banks_client.process_transaction(change_destination_transaction).await.unwrap();
     
 }
 

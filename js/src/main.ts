@@ -11,7 +11,6 @@ import {
   getAssociatedTokenAddress,
 } from '@solana/spl-token';
 import {
-  createChangeDestinationInstruction,
   createCreateInstruction,
   createInitInstruction,
   createUnlockInstruction,
@@ -185,55 +184,4 @@ export async function getContractInfo(
     throw new Error('Vesting contract account is not initialized');
   }
   return info!;
-}
-
-/**
- * This function can be used to transfer a vesting account to a new wallet. It requires the current owner to sign.
- * @param connection The Solana RPC connection object
- * @param programId The token vesting program ID
- * @param currentDestinationTokenAccountPublicKey The current token account to which the vested tokens are transfered to as they unlock
- * @param newDestinationTokenAccountOwner The new owner of the vesting account
- * @param newDestinationTokenAccount The new token account to which the vested tokens will be transfered to as they unlock
- * @param vestingSeed Seed words used to derive the vesting account
- * @returns An array of `TransactionInstruction`
- */
-export async function changeDestination(
-  connection: Connection,
-  programId: PublicKey,
-  currentDestinationTokenAccountPublicKey: PublicKey,
-  newDestinationTokenAccountOwner: PublicKey | undefined,
-  newDestinationTokenAccount: PublicKey | undefined,
-  vestingSeed: Array<Buffer | Uint8Array>,
-): Promise<Array<TransactionInstruction>> {
-  let seedWord = vestingSeed[0];
-  seedWord = seedWord.slice(0, 31);
-  const [vestingAccountKey, bump] = await PublicKey.findProgramAddress(
-    [seedWord],
-    programId,
-  );
-  seedWord = Buffer.from(seedWord.toString('hex') + bump.toString(16), 'hex');
-
-  const contractInfo = await getContractInfo(connection, vestingAccountKey);
-  if (!newDestinationTokenAccount) {
-    assert(
-      !!newDestinationTokenAccountOwner,
-      'At least one of newDestinationTokenAccount and newDestinationTokenAccountOwner must be provided!',
-    );
-    newDestinationTokenAccount = await getAssociatedTokenAddress(
-      contractInfo.mintAddress,
-      newDestinationTokenAccountOwner!,
-      true,
-    );
-  }
-
-  return [
-    createChangeDestinationInstruction(
-      programId,
-      vestingAccountKey,
-      currentDestinationTokenAccountPublicKey,
-      contractInfo.destinationAddress,
-      newDestinationTokenAccount,
-      [seedWord],
-    ),
-  ];
 }
