@@ -108,13 +108,14 @@ async fn test_token_vesting() {
 
     let schedule = Schedule {
         amount: 100,
-        time_delta: 1,
+        time_delta: 60,
     };
 
     let test_instructions = [
         create(
             &program_id,
             &spl_token::id(),
+            &sysvar::clock::id(),
             &vesting_account_key,
             &vesting_token_account.pubkey(),
             &source_account.pubkey(),
@@ -265,6 +266,7 @@ async fn test_token_unlocking() {
             create(
                 &program_id,
                 &spl_token::id(),
+                &sysvar::clock::id(),
                 &vesting_account_key,
                 &vesting_token_account.pubkey(),
                 &source_account.pubkey(),

@@ -72,6 +72,7 @@ pub enum VestingInstruction {
     ///
     ///   * Single owner
     ///   0. `[]` The spl-token program account
+    ///   1. `[]` The clock sysvar account
     ///   1. `[writable]` The vesting account
     ///   2. `[writable]` The vesting spl-token account
     ///   3. `[signer]` The source spl-token account owner
@@ -219,6 +220,7 @@ pub fn init(
 pub fn create(
     vesting_program_id: &Pubkey,
     token_program_id: &Pubkey,
+    clock_sysvar_id: &Pubkey,
     vesting_account_key: &Pubkey,
     vesting_token_account_key: &Pubkey,
     source_token_account_owner_key: &Pubkey,
@@ -235,6 +237,7 @@ pub fn create(
     .pack();
     let accounts = vec![
         AccountMeta::new_readonly(*token_program_id, false),
+        AccountMeta::new_readonly(*clock_sysvar_id, false),
         AccountMeta::new(*vesting_account_key, false),
         AccountMeta::new(*vesting_token_account_key, false),
         AccountMeta::new_readonly(*source_token_account_owner_key, true),

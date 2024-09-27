@@ -53,6 +53,7 @@ export function createInitInstruction(
 export function createCreateInstruction(
   vestingProgramId: PublicKey,
   tokenProgramId: PublicKey,
+  clockSysvarId: PublicKey,
   vestingAccountKey: PublicKey,
   vestingTokenAccountKey: PublicKey,
   sourceTokenAccountOwnerKey: PublicKey,
@@ -75,6 +76,11 @@ export function createCreateInstruction(
   const keys = [
     {
       pubkey: tokenProgramId,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: clockSysvarId,
       isSigner: false,
       isWritable: false,
     },

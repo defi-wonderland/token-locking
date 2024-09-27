@@ -104,6 +104,7 @@ export async function create(
     createCreateInstruction(
       programId,
       TOKEN_PROGRAM_ID,
+      SYSVAR_CLOCK_PUBKEY,
       vestingAccountKey,
       vestingTokenAccountKey,
       sourceTokenOwner,

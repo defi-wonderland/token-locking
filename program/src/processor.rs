@@ -78,6 +78,7 @@ impl Processor {
         let accounts_iter = &mut accounts.iter();
 
         let spl_token_account = next_account_info(accounts_iter)?;
+        let clock_sysvar_account = next_account_info(accounts_iter)?;
         let vesting_account = next_account_info(accounts_iter)?;
         let vesting_token_account = next_account_info(accounts_iter)?;
         let source_token_account_owner = next_account_info(accounts_iter)?;
@@ -136,9 +137,10 @@ impl Processor {
             return Err(ProgramError::InvalidAccountData);
         }
         state_header.pack_into_slice(&mut data);
-
+        
+        let clock = Clock::from_account_info(&clock_sysvar_account)?;
         let mut total_amount: u64 = 0;
-
+        
         // NOTE: validate time delta to be 0 (unlocked), or a set of predefined values (1 month, 3 months, ...)
         let release_time;
         match schedule.time_delta {
@@ -340,7 +342,6 @@ impl Processor {
             msg!("Shouldn't initialize withdrawal for already initialized schedule");
             return Err(ProgramError::InvalidArgument);
         }
-
         
         // Withdrawal period is 7 days = 7 * 86400 = 604_800
         schedule.release_time = clock.unix_timestamp as u64 + 604_800;
