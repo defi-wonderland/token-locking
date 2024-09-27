@@ -242,8 +242,9 @@ impl Processor {
 
         // Unlock the schedules that have reached maturity
         let clock = Clock::from_account_info(&clock_sysvar_account)?;
-        let mut total_amount_to_transfer = 0;
         let mut schedule = unpack_schedule(&packed_state.borrow()[VestingScheduleHeader::LEN..])?;
+        
+        let mut total_amount_to_transfer = 0;
 
         if schedule.release_time == 0 {
             msg!("Should initialize withdrawal first");
