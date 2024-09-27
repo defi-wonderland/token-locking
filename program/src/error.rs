@@ -7,7 +7,7 @@ use thiserror::Error;
 pub enum VestingError {
     // Invalid instruction
     #[error("Invalid Instruction")]
-    InvalidInstruction
+    InvalidInstruction,
 }
 
 impl From<VestingError> for ProgramError {

@@ -3,9 +3,15 @@ use std::str::FromStr;
 
 use solana_program::{hash::Hash, pubkey::Pubkey, rent::Rent, system_program, sysvar};
 use solana_program_test::{processor, ProgramTest, ProgramTestContext};
-use solana_sdk::{account::Account, signature::Keypair, signature::Signer, system_instruction,transaction::Transaction};
+use solana_sdk::{
+    account::Account, signature::Keypair, signature::Signer, system_instruction,
+    transaction::Transaction,
+};
 use solana_test_framework::ProgramTestContextExtension;
-use spl_token::{self,instruction::{initialize_account, initialize_mint, mint_to}};
+use spl_token::{
+    self,
+    instruction::{initialize_account, initialize_mint, mint_to},
+};
 use token_vesting::instruction::{create, init, initialize_unlock, unlock};
 use token_vesting::{entrypoint::process_instruction, instruction::Schedule};
 
@@ -49,37 +55,45 @@ async fn test_token_vesting() {
         seeds,
     )
     .unwrap()];
-    let mut init_transaction = Transaction::new_with_payer(
-        &init_instruction, 
-        Some(&payer.pubkey()),
-    );
+    let mut init_transaction =
+        Transaction::new_with_payer(&init_instruction, Some(&payer.pubkey()));
     init_transaction.partial_sign(&[&payer], recent_blockhash);
-    banks_client.process_transaction(init_transaction).await.unwrap();
+    banks_client
+        .process_transaction(init_transaction)
+        .await
+        .unwrap();
 
     // Initialize the token accounts
-    banks_client.process_transaction(mint_init_transaction(
+    banks_client
+        .process_transaction(mint_init_transaction(
             &payer,
             &mint,
             &mint_authority,
             recent_blockhash,
         ))
-        .await.unwrap();
-    
-    banks_client.process_transaction(create_token_account(
+        .await
+        .unwrap();
+
+    banks_client
+        .process_transaction(create_token_account(
             &payer,
             &mint,
             recent_blockhash,
             &source_token_account,
             &source_account.pubkey(),
-        )).await.unwrap();
-    banks_client.process_transaction(
-            create_token_account(
+        ))
+        .await
+        .unwrap();
+    banks_client
+        .process_transaction(create_token_account(
             &payer,
             &mint,
             recent_blockhash,
             &vesting_token_account,
             &vesting_account_key,
-        )).await.unwrap();
+        ))
+        .await
+        .unwrap();
 
     // Create and process the vesting transactions
     let setup_instructions = [mint_to(
@@ -94,13 +108,14 @@ async fn test_token_vesting() {
 
     let schedule = Schedule {
         amount: 100,
-        time_delta: 1,
+        time_delta: 60,
     };
 
     let test_instructions = [
         create(
             &program_id,
             &spl_token::id(),
+            &sysvar::clock::id(),
             &vesting_account_key,
             &vesting_token_account.pubkey(),
             &source_account.pubkey(),
@@ -127,7 +142,10 @@ async fn test_token_vesting() {
         Transaction::new_with_payer(&setup_instructions, Some(&payer.pubkey()));
     setup_transaction.partial_sign(&[&payer, &mint_authority], recent_blockhash);
 
-    banks_client.process_transaction(setup_transaction).await.unwrap();
+    banks_client
+        .process_transaction(setup_transaction)
+        .await
+        .unwrap();
 
     // Process transaction on test network
     let mut test_transaction =
@@ -188,10 +206,8 @@ async fn test_token_unlocking() {
             seeds,
         )
         .unwrap()];
-        let mut init_transaction = Transaction::new_with_payer(
-            &init_instruction, 
-            Some(&payer.pubkey()),
-        );
+        let mut init_transaction =
+            Transaction::new_with_payer(&init_instruction, Some(&payer.pubkey()));
         init_transaction.partial_sign(&[&payer], recent_blockhash);
         banks_client
             .process_transaction(init_transaction)
@@ -209,8 +225,8 @@ async fn test_token_unlocking() {
             .await
             .unwrap();
 
-        banks_client.process_transaction(
-            create_token_account(
+        banks_client
+            .process_transaction(create_token_account(
                 &payer,
                 &mint,
                 recent_blockhash,
@@ -219,8 +235,8 @@ async fn test_token_unlocking() {
             ))
             .await
             .unwrap();
-        banks_client.process_transaction(
-            create_token_account(
+        banks_client
+            .process_transaction(create_token_account(
                 &payer,
                 &mint,
                 recent_blockhash,
@@ -250,6 +266,7 @@ async fn test_token_unlocking() {
             create(
                 &program_id,
                 &spl_token::id(),
+                &sysvar::clock::id(),
                 &vesting_account_key,
                 &vesting_token_account.pubkey(),
                 &source_account.pubkey(),
@@ -279,7 +296,7 @@ async fn test_token_unlocking() {
                 &source_token_account.pubkey(),
                 seeds.clone(),
             )
-            .unwrap()
+            .unwrap(),
         ];
 
         // Process transaction on test network

@@ -1,4 +1,8 @@
-import { PublicKey, SYSVAR_RENT_PUBKEY, TransactionInstruction } from '@solana/web3.js';
+import {
+  PublicKey,
+  SYSVAR_RENT_PUBKEY,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import { Schedule } from './state';
 import { Numberu32 } from './utils';
 
@@ -12,12 +16,9 @@ export function createInitInstruction(
   vestingProgramId: PublicKey,
   payerKey: PublicKey,
   vestingAccountKey: PublicKey,
-  seeds: Array<Buffer | Uint8Array>
+  seeds: Array<Buffer | Uint8Array>,
 ): TransactionInstruction {
-  let buffers = [
-    Buffer.from(Int8Array.from([0]).buffer),
-    Buffer.concat(seeds),
-  ];
+  let buffers = [Buffer.from(Int8Array.from([0]).buffer), Buffer.concat(seeds)];
 
   const data = Buffer.concat(buffers);
   const keys = [
@@ -53,11 +54,11 @@ export function createInitInstruction(
 export function createCreateInstruction(
   vestingProgramId: PublicKey,
   tokenProgramId: PublicKey,
+  clockSysvarId: PublicKey,
   vestingAccountKey: PublicKey,
   vestingTokenAccountKey: PublicKey,
   sourceTokenAccountOwnerKey: PublicKey,
   sourceTokenAccountKey: PublicKey,
-  destinationTokenAccountKey: PublicKey,
   mintAddress: PublicKey,
   schedule: Schedule,
   seeds: Array<Buffer | Uint8Array>,
@@ -66,7 +67,6 @@ export function createCreateInstruction(
     Buffer.from(Int8Array.from([1]).buffer),
     Buffer.concat(seeds),
     mintAddress.toBuffer(),
-    destinationTokenAccountKey.toBuffer(),
   ];
 
   buffers.push(schedule.toBuffer());
@@ -75,6 +75,11 @@ export function createCreateInstruction(
   const keys = [
     {
       pubkey: tokenProgramId,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: clockSysvarId,
       isSigner: false,
       isWritable: false,
     },

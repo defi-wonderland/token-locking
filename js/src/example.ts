@@ -34,7 +34,7 @@ const DECIMALS = 0;
 const SOURCE_TOKEN_ACCOUNT = new PublicKey('');
 
 /** Amount to give per schedule */
-const AMOUNT_PER_SCHEDULE = 0;
+const LOCKED_AMOUNT = 0;
 
 /** Your RPC connection */
 const connection = new Connection('');
@@ -64,10 +64,10 @@ const lock = async () => {
   const schedule: Schedule = new Schedule(
     /** Has to be in seconds */
     // @ts-ignore
-    new Numberu64(DATE.getTime() / 1_000),
+    new Numberu64(60),
     /** Don't forget to add decimals */
     // @ts-ignore
-    new Numberu64(AMOUNT_PER_SCHEDULE * Math.pow(10, DECIMALS)),
+    new Numberu64(LOCKED_AMOUNT * Math.pow(10, DECIMALS)),
   );
   const seed = generateRandomSeed();
 

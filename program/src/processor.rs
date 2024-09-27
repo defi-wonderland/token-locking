@@ -78,6 +78,7 @@ impl Processor {
         let accounts_iter = &mut accounts.iter();
 
         let spl_token_account = next_account_info(accounts_iter)?;
+        let clock_sysvar_account = next_account_info(accounts_iter)?;
         let vesting_account = next_account_info(accounts_iter)?;
         let vesting_token_account = next_account_info(accounts_iter)?;
         let source_token_account_owner = next_account_info(accounts_iter)?;
@@ -133,27 +134,31 @@ impl Processor {
 
         let mut data = vesting_account.data.borrow_mut();
         if data.len() != VestingScheduleHeader::LEN + VestingSchedule::LEN {
-            return Err(ProgramError::InvalidAccountData)
+            return Err(ProgramError::InvalidAccountData);
         }
         state_header.pack_into_slice(&mut data);
-
+        
+        let clock = Clock::from_account_info(&clock_sysvar_account)?;
         let mut total_amount: u64 = 0;
-
+        
         // NOTE: validate time delta to be 0 (unlocked), or a set of predefined values (1 month, 3 months, ...)
         let release_time;
         match schedule.time_delta {
+            /* Valid time_delta values:
+            * 0: unlocked (with 7 day withdrawal period)
+            * 12 months = 12 * 30 * 86400 = 31_104_000
+            * 18 months = 18 * 30 * 86400 = 46_656_000
+            * 24 months = 24 * 30 * 86400 = 62_208_000
+            * 36 months = 36 * 30 * 86400 = 93_312_000
+            */
             0 => {
                 release_time = 0;
-            },
-            1 | 100 | 300 => { // TODO: replace for validated values
-                // Valid time_delta values, do nothing 
-                // TODO: make test advance in time between initialize and unlock
-                // let clock = Clock::from_account_info(&clock_sysvar_account)?;
-                // release_time = clock.unix_timestamp as u64 + schedule.time_delta; // TODO: uncomment
-                release_time = schedule.time_delta; // NOTE: For testing purposes, keeping previous behavior
-            }            
+            }
+            31_104_000 | 46_656_000 | 62_208_000 | 93_312_000 => {
+                release_time = clock.unix_timestamp as u64 + schedule.time_delta;
+            }
             _ => {
-                msg!("Unsupported time delta");
+                msg!("Unsupported time delta: {}", schedule.time_delta);
                 return Err(ProgramError::InvalidInstructionData);
             }
         }
@@ -237,15 +242,15 @@ impl Processor {
 
         // Unlock the schedules that have reached maturity
         let clock = Clock::from_account_info(&clock_sysvar_account)?;
-        let mut total_amount_to_transfer = 0;
         let mut schedule = unpack_schedule(&packed_state.borrow()[VestingScheduleHeader::LEN..])?;
+        
+        let mut total_amount_to_transfer = 0;
 
         if schedule.release_time == 0 {
             msg!("Should initialize withdrawal first");
             return Err(ProgramError::InvalidArgument);
         }
 
-        msg!("UNIX: {}", clock.unix_timestamp);  // TODO: rm
         if clock.unix_timestamp as u64 >= schedule.release_time {
             total_amount_to_transfer += schedule.amount;
             schedule.amount = 0;
@@ -338,11 +343,9 @@ impl Processor {
             msg!("Shouldn't initialize withdrawal for already initialized schedule");
             return Err(ProgramError::InvalidArgument);
         }
-
-        msg!("UNIX: {}", clock.unix_timestamp); // TODO: rm
-        // TODO: make test advance in time between initialize and unlock
-        // schedule.release_time = clock.unix_timestamp as u64 + 1; // TODO: change 1 for 7 days
-        schedule.release_time = 1; // NOTE: For testing purposes, !=0 and < current time
+        
+        // Withdrawal period is 7 days = 7 * 86400 = 604_800
+        schedule.release_time = clock.unix_timestamp as u64 + 604_800;
 
         // Reset released amounts to 0. This makes the simple unlock safe with complex scheduling contracts
         pack_schedule_into_slice(
@@ -362,9 +365,7 @@ impl Processor {
         let instruction = VestingInstruction::unpack(instruction_data)?;
         msg!("Instruction unpacked");
         match instruction {
-            VestingInstruction::Init {
-                seeds,
-            } => {
+            VestingInstruction::Init { seeds } => {
                 msg!("Instruction: Init");
                 Self::process_init(program_id, accounts, seeds)
             }
@@ -382,13 +383,7 @@ impl Processor {
                 schedule,
             } => {
                 msg!("Instruction: Create Schedule");
-                Self::process_create(
-                    program_id,
-                    accounts,
-                    seeds,
-                    &mint_address,
-                    schedule,
-                )
+                Self::process_create(program_id, accounts, seeds, &mint_address, schedule)
             }
         }
     }
