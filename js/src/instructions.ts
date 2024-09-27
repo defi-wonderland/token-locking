@@ -1,4 +1,8 @@
-import { PublicKey, SYSVAR_RENT_PUBKEY, TransactionInstruction } from '@solana/web3.js';
+import {
+  PublicKey,
+  SYSVAR_RENT_PUBKEY,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import { Schedule } from './state';
 import { Numberu32 } from './utils';
 
@@ -12,12 +16,9 @@ export function createInitInstruction(
   vestingProgramId: PublicKey,
   payerKey: PublicKey,
   vestingAccountKey: PublicKey,
-  seeds: Array<Buffer | Uint8Array>
+  seeds: Array<Buffer | Uint8Array>,
 ): TransactionInstruction {
-  let buffers = [
-    Buffer.from(Int8Array.from([0]).buffer),
-    Buffer.concat(seeds),
-  ];
+  let buffers = [Buffer.from(Int8Array.from([0]).buffer), Buffer.concat(seeds)];
 
   const data = Buffer.concat(buffers);
   const keys = [

@@ -93,7 +93,7 @@ export async function create(
       programId,
       payer,
       vestingAccountKey,
-      [seedWord]
+      [seedWord],
     ),
     createAssociatedTokenAccountInstruction(
       payer,
