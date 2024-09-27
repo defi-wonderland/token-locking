@@ -59,7 +59,6 @@ export function createCreateInstruction(
   vestingTokenAccountKey: PublicKey,
   sourceTokenAccountOwnerKey: PublicKey,
   sourceTokenAccountKey: PublicKey,
-  destinationTokenAccountKey: PublicKey,
   mintAddress: PublicKey,
   schedule: Schedule,
   seeds: Array<Buffer | Uint8Array>,
@@ -68,7 +67,6 @@ export function createCreateInstruction(
     Buffer.from(Int8Array.from([1]).buffer),
     Buffer.concat(seeds),
     mintAddress.toBuffer(),
-    destinationTokenAccountKey.toBuffer(),
   ];
 
   buffers.push(schedule.toBuffer());

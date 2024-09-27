@@ -158,7 +158,7 @@ impl Processor {
                 release_time = clock.unix_timestamp as u64 + schedule.time_delta;
             }
             _ => {
-                msg!("Unsupported time delta");
+                msg!("Unsupported time delta: {}", schedule.time_delta);
                 return Err(ProgramError::InvalidInstructionData);
             }
         }

@@ -109,7 +109,6 @@ export async function create(
       vestingTokenAccountKey,
       sourceTokenOwner,
       possibleSourceTokenPubkey,
-      destinationTokenPubkey,
       mintAddress,
       schedule,
       [seedWord],
