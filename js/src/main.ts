@@ -17,7 +17,6 @@ import {
   createInitializeUnlockInstruction,
 } from './instructions';
 import { ContractInfo, Schedule } from './state';
-import { assert } from 'console';
 import bs58 from 'bs58';
 
 /**
