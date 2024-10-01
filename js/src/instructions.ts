@@ -4,7 +4,6 @@ import {
   TransactionInstruction,
 } from '@solana/web3.js';
 import { CreateSchedule } from './state';
-import { Numberu32 } from './utils';
 
 export enum Instruction {
   Init,

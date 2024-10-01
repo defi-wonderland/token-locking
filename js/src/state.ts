@@ -91,7 +91,7 @@ export class ContractInfo {
     if (!header.isInitialized) {
       return undefined;
     }
-    const schedule = Schedule.fromBuffer(buf.slice(65, 81))
+    const schedule = Schedule.fromBuffer(buf.slice(65, 81));
     return new ContractInfo(
       header.destinationAddress,
       header.mintAddress,
