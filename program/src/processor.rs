@@ -18,8 +18,8 @@ use spl_token::{instruction::transfer, state::Account};
 
 use crate::{
     error::VestingError,
-    instruction::{Schedule, VestingInstruction, SCHEDULE_SIZE},
-    state::{pack_schedules_into_slice, unpack_schedules, VestingSchedule, VestingScheduleHeader},
+    instruction::{Schedule, VestingInstruction},
+    state::{pack_schedule_into_slice, unpack_schedule, VestingSchedule, VestingScheduleHeader},
 };
 
 pub struct Processor {}
@@ -29,7 +29,6 @@ impl Processor {
         program_id: &Pubkey,
         accounts: &[AccountInfo],
         seeds: [u8; 32],
-        schedules: u32
     ) -> ProgramResult {
         let accounts_iter = &mut accounts.iter();
 
@@ -47,7 +46,7 @@ impl Processor {
             return Err(ProgramError::InvalidArgument);
         }
 
-        let state_size = (schedules as usize) * VestingSchedule::LEN + VestingScheduleHeader::LEN;
+        let state_size = VestingSchedule::LEN + VestingScheduleHeader::LEN;
 
         let init_vesting_account = create_account(
             &payer.key,
@@ -74,12 +73,12 @@ impl Processor {
         accounts: &[AccountInfo],
         seeds: [u8; 32],
         mint_address: &Pubkey,
-        destination_token_address: &Pubkey,
-        schedules: Vec<Schedule>,
+        schedule: Schedule,
     ) -> ProgramResult {
         let accounts_iter = &mut accounts.iter();
 
         let spl_token_account = next_account_info(accounts_iter)?;
+        let clock_sysvar_account = next_account_info(accounts_iter)?;
         let vesting_account = next_account_info(accounts_iter)?;
         let vesting_token_account = next_account_info(accounts_iter)?;
         let source_token_account_owner = next_account_info(accounts_iter)?;
@@ -128,37 +127,56 @@ impl Processor {
         }
 
         let state_header = VestingScheduleHeader {
-            destination_address: *destination_token_address,
+            destination_address: *source_token_account.key,
             mint_address: *mint_address,
             is_initialized: true,
         };
 
         let mut data = vesting_account.data.borrow_mut();
-        if data.len() != VestingScheduleHeader::LEN + schedules.len() * VestingSchedule::LEN {
-            return Err(ProgramError::InvalidAccountData)
+        if data.len() != VestingScheduleHeader::LEN + VestingSchedule::LEN {
+            return Err(ProgramError::InvalidAccountData);
         }
         state_header.pack_into_slice(&mut data);
-
-        let mut offset = VestingScheduleHeader::LEN;
-        let mut total_amount: u64 = 0;
-
-        for s in schedules.iter() {
-            let state_schedule = VestingSchedule {
-                release_time: s.release_time,
-                amount: s.amount,
-            };
-            state_schedule.pack_into_slice(&mut data[offset..]);
-            let delta = total_amount.checked_add(s.amount);
-            match delta {
-                Some(n) => total_amount = n,
-                None => return Err(ProgramError::InvalidInstructionData), // Total amount overflows u64
-            }
-            offset += SCHEDULE_SIZE;
-        }
         
+        let clock = Clock::from_account_info(&clock_sysvar_account)?;
+        let mut total_amount: u64 = 0;
+        
+        // NOTE: validate time delta to be 0 (unlocked), or a set of predefined values (1 month, 3 months, ...)
+        let release_time;
+        match schedule.time_delta {
+            /* Valid time_delta values:
+            * 0: unlocked (with 7 day withdrawal period)
+            * 12 months = 12 * 30 * 86400 = 31_104_000
+            * 18 months = 18 * 30 * 86400 = 46_656_000
+            * 24 months = 24 * 30 * 86400 = 62_208_000
+            * 36 months = 36 * 30 * 86400 = 93_312_000
+            */
+            0 => {
+                release_time = 0;
+            }
+            31_104_000 | 46_656_000 | 62_208_000 | 93_312_000 => {
+                release_time = clock.unix_timestamp as u64 + schedule.time_delta;
+            }
+            _ => {
+                msg!("Unsupported time delta: {}", schedule.time_delta);
+                return Err(ProgramError::InvalidInstructionData);
+            }
+        }
+
+        let state_schedule = VestingSchedule {
+            release_time: release_time,
+            amount: schedule.amount,
+        };
+        state_schedule.pack_into_slice(&mut data[VestingScheduleHeader::LEN..]);
+        let delta = total_amount.checked_add(schedule.amount);
+        match delta {
+            Some(n) => total_amount = n,
+            None => return Err(ProgramError::InvalidInstructionData), // Total amount overflows u64
+        }
+
         if Account::unpack(&source_token_account.data.borrow())?.amount < total_amount {
             msg!("The source token account has insufficient funds.");
-            return Err(ProgramError::InsufficientFunds)
+            return Err(ProgramError::InsufficientFunds);
         };
 
         let transfer_tokens_to_vesting_account = transfer(
@@ -203,7 +221,7 @@ impl Processor {
 
         if spl_token_account.key != &spl_token::id() {
             msg!("The provided spl token program account is invalid");
-            return Err(ProgramError::InvalidArgument)
+            return Err(ProgramError::InvalidArgument);
         }
 
         let packed_state = &vesting_account.data;
@@ -224,15 +242,20 @@ impl Processor {
 
         // Unlock the schedules that have reached maturity
         let clock = Clock::from_account_info(&clock_sysvar_account)?;
+        let mut schedule = unpack_schedule(&packed_state.borrow()[VestingScheduleHeader::LEN..])?;
+        
         let mut total_amount_to_transfer = 0;
-        let mut schedules = unpack_schedules(&packed_state.borrow()[VestingScheduleHeader::LEN..])?;
 
-        for s in schedules.iter_mut() {
-            if clock.unix_timestamp as u64 >= s.release_time {
-                total_amount_to_transfer += s.amount;
-                s.amount = 0;
-            }
+        if schedule.release_time == 0 {
+            msg!("Should initialize withdrawal first");
+            return Err(ProgramError::InvalidArgument);
         }
+
+        if clock.unix_timestamp as u64 >= schedule.release_time {
+            total_amount_to_transfer += schedule.amount;
+            schedule.amount = 0;
+        }
+
         if total_amount_to_transfer == 0 {
             msg!("Vesting contract has not yet reached release time");
             return Err(ProgramError::InvalidArgument);
@@ -259,60 +282,76 @@ impl Processor {
         )?;
 
         // Reset released amounts to 0. This makes the simple unlock safe with complex scheduling contracts
-        pack_schedules_into_slice(
-            schedules,
+        pack_schedule_into_slice(
+            schedule,
             &mut packed_state.borrow_mut()[VestingScheduleHeader::LEN..],
         );
 
         Ok(())
     }
 
-    pub fn process_change_destination(
+    pub fn process_initialize_unlock(
         program_id: &Pubkey,
-        accounts: &[AccountInfo],
+        _accounts: &[AccountInfo],
         seeds: [u8; 32],
     ) -> ProgramResult {
-        let accounts_iter = &mut accounts.iter();
+        let accounts_iter = &mut _accounts.iter();
 
+        let spl_token_account = next_account_info(accounts_iter)?;
+        let clock_sysvar_account = next_account_info(accounts_iter)?;
         let vesting_account = next_account_info(accounts_iter)?;
+        let vesting_token_account = next_account_info(accounts_iter)?;
         let destination_token_account = next_account_info(accounts_iter)?;
-        let destination_token_account_owner = next_account_info(accounts_iter)?;
-        let new_destination_token_account = next_account_info(accounts_iter)?;
 
-        if vesting_account.data.borrow().len() < VestingScheduleHeader::LEN {
-            return Err(ProgramError::InvalidAccountData)
-        }
         let vesting_account_key = Pubkey::create_program_address(&[&seeds], program_id)?;
-        let state = VestingScheduleHeader::unpack(
-            &vesting_account.data.borrow()[..VestingScheduleHeader::LEN],
-        )?;
-
         if vesting_account_key != *vesting_account.key {
             msg!("Invalid vesting account key");
             return Err(ProgramError::InvalidArgument);
         }
 
-        if state.destination_address != *destination_token_account.key {
+        if spl_token_account.key != &spl_token::id() {
+            msg!("The provided spl token program account is invalid");
+            return Err(ProgramError::InvalidArgument);
+        }
+
+        let packed_state = &vesting_account.data;
+        let header_state =
+            VestingScheduleHeader::unpack(&packed_state.borrow()[..VestingScheduleHeader::LEN])?;
+
+        if header_state.destination_address != *destination_token_account.key {
             msg!("Contract destination account does not matched provided account");
             return Err(ProgramError::InvalidArgument);
         }
 
-        if !destination_token_account_owner.is_signer {
-            msg!("Destination token account owner should be a signer.");
+        let vesting_token_account_data = Account::unpack(&vesting_token_account.data.borrow())?;
+
+        if vesting_token_account_data.owner != vesting_account_key {
+            msg!("The vesting token account should be owned by the vesting account.");
             return Err(ProgramError::InvalidArgument);
         }
 
-        let destination_token_account = Account::unpack(&destination_token_account.data.borrow())?;
+        // Unlock the schedules that have reached maturity
+        let clock = Clock::from_account_info(&clock_sysvar_account)?;
+        let mut schedule = unpack_schedule(&packed_state.borrow()[VestingScheduleHeader::LEN..])?;
 
-        if destination_token_account.owner != *destination_token_account_owner.key {
-            msg!("The current destination token account isn't owned by the provided owner");
+        if schedule.amount == 0 {
+            msg!("Vesting contract already claimed");
             return Err(ProgramError::InvalidArgument);
         }
 
-        let mut new_state = state;
-        new_state.destination_address = *new_destination_token_account.key;
-        new_state
-            .pack_into_slice(&mut vesting_account.data.borrow_mut()[..VestingScheduleHeader::LEN]);
+        if schedule.release_time != 0 {
+            msg!("Shouldn't initialize withdrawal for already initialized schedule");
+            return Err(ProgramError::InvalidArgument);
+        }
+        
+        // Withdrawal period is 7 days = 7 * 86400 = 604_800
+        schedule.release_time = clock.unix_timestamp as u64 + 604_800;
+
+        // Reset released amounts to 0. This makes the simple unlock safe with complex scheduling contracts
+        pack_schedule_into_slice(
+            schedule,
+            &mut packed_state.borrow_mut()[VestingScheduleHeader::LEN..],
+        );
 
         Ok(())
     }
@@ -326,36 +365,25 @@ impl Processor {
         let instruction = VestingInstruction::unpack(instruction_data)?;
         msg!("Instruction unpacked");
         match instruction {
-            VestingInstruction::Init {
-                seeds,
-                number_of_schedules,
-            } => {
+            VestingInstruction::Init { seeds } => {
                 msg!("Instruction: Init");
-                Self::process_init(program_id, accounts, seeds, number_of_schedules)
+                Self::process_init(program_id, accounts, seeds)
             }
             VestingInstruction::Unlock { seeds } => {
                 msg!("Instruction: Unlock");
                 Self::process_unlock(program_id, accounts, seeds)
             }
-            VestingInstruction::ChangeDestination { seeds } => {
-                msg!("Instruction: Change Destination");
-                Self::process_change_destination(program_id, accounts, seeds)
+            VestingInstruction::InitializeUnlock { seeds } => {
+                msg!("Instruction: InitializeUnlock");
+                Self::process_initialize_unlock(program_id, accounts, seeds)
             }
             VestingInstruction::Create {
                 seeds,
                 mint_address,
-                destination_token_address,
-                schedules,
+                schedule,
             } => {
                 msg!("Instruction: Create Schedule");
-                Self::process_create(
-                    program_id,
-                    accounts,
-                    seeds,
-                    &mint_address,
-                    &destination_token_address,
-                    schedules,
-                )
+                Self::process_create(program_id, accounts, seeds, &mint_address, schedule)
             }
         }
     }

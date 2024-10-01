@@ -1,4 +1,8 @@
-import { PublicKey, SYSVAR_RENT_PUBKEY, TransactionInstruction } from '@solana/web3.js';
+import {
+  PublicKey,
+  SYSVAR_RENT_PUBKEY,
+  TransactionInstruction,
+} from '@solana/web3.js';
 import { Schedule } from './state';
 import { Numberu32 } from './utils';
 
@@ -13,14 +17,8 @@ export function createInitInstruction(
   payerKey: PublicKey,
   vestingAccountKey: PublicKey,
   seeds: Array<Buffer | Uint8Array>,
-  numberOfSchedules: number,
 ): TransactionInstruction {
-  let buffers = [
-    Buffer.from(Int8Array.from([0]).buffer),
-    Buffer.concat(seeds),
-    // @ts-ignore
-    new Numberu32(numberOfSchedules).toBuffer(),
-  ];
+  let buffers = [Buffer.from(Int8Array.from([0]).buffer), Buffer.concat(seeds)];
 
   const data = Buffer.concat(buffers);
   const keys = [
@@ -56,30 +54,32 @@ export function createInitInstruction(
 export function createCreateInstruction(
   vestingProgramId: PublicKey,
   tokenProgramId: PublicKey,
+  clockSysvarId: PublicKey,
   vestingAccountKey: PublicKey,
   vestingTokenAccountKey: PublicKey,
   sourceTokenAccountOwnerKey: PublicKey,
   sourceTokenAccountKey: PublicKey,
-  destinationTokenAccountKey: PublicKey,
   mintAddress: PublicKey,
-  schedules: Array<Schedule>,
+  schedule: Schedule,
   seeds: Array<Buffer | Uint8Array>,
 ): TransactionInstruction {
   let buffers = [
     Buffer.from(Int8Array.from([1]).buffer),
     Buffer.concat(seeds),
     mintAddress.toBuffer(),
-    destinationTokenAccountKey.toBuffer(),
   ];
 
-  schedules.forEach(s => {
-    buffers.push(s.toBuffer());
-  });
+  buffers.push(schedule.toBuffer());
 
   const data = Buffer.concat(buffers);
   const keys = [
     {
       pubkey: tokenProgramId,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: clockSysvarId,
       isSigner: false,
       isWritable: false,
     },
@@ -159,12 +159,13 @@ export function createUnlockInstruction(
   });
 }
 
-export function createChangeDestinationInstruction(
+export function createInitializeUnlockInstruction(
   vestingProgramId: PublicKey,
+  tokenProgramId: PublicKey,
+  clockSysvarId: PublicKey,
   vestingAccountKey: PublicKey,
-  currentDestinationTokenAccountOwner: PublicKey,
-  currentDestinationTokenAccount: PublicKey,
-  targetDestinationTokenAccount: PublicKey,
+  vestingTokenAccountKey: PublicKey,
+  destinationTokenAccountKey: PublicKey,
   seeds: Array<Buffer | Uint8Array>,
 ): TransactionInstruction {
   const data = Buffer.concat([
@@ -174,24 +175,29 @@ export function createChangeDestinationInstruction(
 
   const keys = [
     {
+      pubkey: tokenProgramId,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: clockSysvarId,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
       pubkey: vestingAccountKey,
       isSigner: false,
       isWritable: true,
     },
     {
-      pubkey: currentDestinationTokenAccount,
+      pubkey: vestingTokenAccountKey,
       isSigner: false,
-      isWritable: false,
+      isWritable: true,
     },
     {
-      pubkey: currentDestinationTokenAccountOwner,
-      isSigner: true,
-      isWritable: false,
-    },
-    {
-      pubkey: targetDestinationTokenAccount,
+      pubkey: destinationTokenAccountKey,
       isSigner: false,
-      isWritable: false,
+      isWritable: true,
     },
   ];
   return new TransactionInstruction({

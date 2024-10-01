@@ -11,10 +11,10 @@ import {
   getAssociatedTokenAddress,
 } from '@solana/spl-token';
 import {
-  createChangeDestinationInstruction,
   createCreateInstruction,
   createInitInstruction,
   createUnlockInstruction,
+  createInitializeUnlockInstruction,
 } from './instructions';
 import { ContractInfo, Schedule } from './state';
 import { assert } from 'console';
@@ -37,7 +37,7 @@ export const TOKEN_VESTING_PROGRAM_ID = new PublicKey(
  * @param possibleSourceTokenPubkey The source token account (i.e where locked tokens are originating from), if null it defaults to the ATA
  * @param destinationTokenPubkey The destination token account i.e where unlocked tokens will be transfered
  * @param mintAddress The mint of the tokens being vested
- * @param schedules The array of vesting schedules
+ * @param schedule The vesting schedule
  * @returns An array of `TransactionInstruction`
  */
 export async function create(
@@ -49,7 +49,7 @@ export async function create(
   possibleSourceTokenPubkey: PublicKey | null,
   destinationTokenPubkey: PublicKey,
   mintAddress: PublicKey,
-  schedules: Array<Schedule>,
+  schedule: Schedule,
 ): Promise<Array<TransactionInstruction>> {
   // If no source token account was given, use the associated source account
   if (possibleSourceTokenPubkey == null) {
@@ -94,7 +94,6 @@ export async function create(
       payer,
       vestingAccountKey,
       [seedWord],
-      schedules.length,
     ),
     createAssociatedTokenAccountInstruction(
       payer,
@@ -105,13 +104,13 @@ export async function create(
     createCreateInstruction(
       programId,
       TOKEN_PROGRAM_ID,
+      SYSVAR_CLOCK_PUBKEY,
       vestingAccountKey,
       vestingTokenAccountKey,
       sourceTokenOwner,
       possibleSourceTokenPubkey,
-      destinationTokenPubkey,
       mintAddress,
-      schedules,
+      schedule,
       [seedWord],
     ),
   ];
@@ -163,6 +162,50 @@ export async function unlock(
 }
 
 /**
+ * This function can be used to initialize the unlock of vested tokens
+ * @param connection The Solana RPC connection object
+ * @param programId The token vesting program ID
+ * @param seedWord Seed words used to derive the vesting account
+ * @param mintAddress The mint of the vested tokens
+ * @returns An array of `TransactionInstruction`
+ */
+export async function initializeUnlock(
+  connection: Connection,
+  programId: PublicKey,
+  seedWord: Buffer | Uint8Array,
+  mintAddress: PublicKey,
+): Promise<Array<TransactionInstruction>> {
+  seedWord = seedWord.slice(0, 31);
+  const [vestingAccountKey, bump] = await PublicKey.findProgramAddress(
+    [seedWord],
+    programId,
+  );
+  seedWord = Buffer.from(seedWord.toString('hex') + bump.toString(16), 'hex');
+
+  const vestingTokenAccountKey = await getAssociatedTokenAddress(
+    mintAddress,
+    vestingAccountKey,
+    true,
+  );
+
+  const vestingInfo = await getContractInfo(connection, vestingAccountKey);
+
+  let instruction = [
+    createInitializeUnlockInstruction(
+      programId,
+      TOKEN_PROGRAM_ID,
+      SYSVAR_CLOCK_PUBKEY,
+      vestingAccountKey,
+      vestingTokenAccountKey,
+      vestingInfo.destinationAddress,
+      [seedWord],
+    ),
+  ];
+
+  return instruction;
+}
+
+/**
  * This function can be used retrieve information about a vesting account
  * @param connection The Solana RPC connection object
  * @param vestingAccountKey The vesting account public key
@@ -185,55 +228,4 @@ export async function getContractInfo(
     throw new Error('Vesting contract account is not initialized');
   }
   return info!;
-}
-
-/**
- * This function can be used to transfer a vesting account to a new wallet. It requires the current owner to sign.
- * @param connection The Solana RPC connection object
- * @param programId The token vesting program ID
- * @param currentDestinationTokenAccountPublicKey The current token account to which the vested tokens are transfered to as they unlock
- * @param newDestinationTokenAccountOwner The new owner of the vesting account
- * @param newDestinationTokenAccount The new token account to which the vested tokens will be transfered to as they unlock
- * @param vestingSeed Seed words used to derive the vesting account
- * @returns An array of `TransactionInstruction`
- */
-export async function changeDestination(
-  connection: Connection,
-  programId: PublicKey,
-  currentDestinationTokenAccountPublicKey: PublicKey,
-  newDestinationTokenAccountOwner: PublicKey | undefined,
-  newDestinationTokenAccount: PublicKey | undefined,
-  vestingSeed: Array<Buffer | Uint8Array>,
-): Promise<Array<TransactionInstruction>> {
-  let seedWord = vestingSeed[0];
-  seedWord = seedWord.slice(0, 31);
-  const [vestingAccountKey, bump] = await PublicKey.findProgramAddress(
-    [seedWord],
-    programId,
-  );
-  seedWord = Buffer.from(seedWord.toString('hex') + bump.toString(16), 'hex');
-
-  const contractInfo = await getContractInfo(connection, vestingAccountKey);
-  if (!newDestinationTokenAccount) {
-    assert(
-      !!newDestinationTokenAccountOwner,
-      'At least one of newDestinationTokenAccount and newDestinationTokenAccountOwner must be provided!',
-    );
-    newDestinationTokenAccount = await getAssociatedTokenAddress(
-      contractInfo.mintAddress,
-      newDestinationTokenAccountOwner!,
-      true,
-    );
-  }
-
-  return [
-    createChangeDestinationInstruction(
-      programId,
-      vestingAccountKey,
-      currentDestinationTokenAccountPublicKey,
-      contractInfo.destinationAddress,
-      newDestinationTokenAccount,
-      [seedWord],
-    ),
-  ];
 }

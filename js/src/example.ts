@@ -20,32 +20,7 @@ const wallet = Keypair.fromSecretKey(
 );
 
 /** There are better way to generate an array of dates but be careful as it's irreversible */
-const DATES = [
-  new Date(2022, 12),
-  new Date(2023, 1),
-  new Date(2023, 2),
-  new Date(2023, 3),
-  new Date(2023, 4),
-  new Date(2023, 5),
-  new Date(2023, 6),
-  new Date(2023, 7),
-  new Date(2023, 8),
-  new Date(2023, 9),
-  new Date(2023, 10),
-  new Date(2023, 11),
-  new Date(2024, 12),
-  new Date(2024, 2),
-  new Date(2024, 3),
-  new Date(2024, 4),
-  new Date(2024, 5),
-  new Date(2024, 6),
-  new Date(2024, 7),
-  new Date(2024, 8),
-  new Date(2024, 9),
-  new Date(2024, 10),
-  new Date(2024, 11),
-  new Date(2024, 12),
-];
+const DATE = new Date(2022, 12);
 
 /** Info about the desintation */
 const DESTINATION_OWNER = new PublicKey('');
@@ -59,7 +34,7 @@ const DECIMALS = 0;
 const SOURCE_TOKEN_ACCOUNT = new PublicKey('');
 
 /** Amount to give per schedule */
-const AMOUNT_PER_SCHEDULE = 0;
+const LOCKED_AMOUNT = 0;
 
 /** Your RPC connection */
 const connection = new Connection('');
@@ -86,19 +61,14 @@ const checks = async () => {
 /** Function that locks the tokens */
 const lock = async () => {
   await checks();
-  const schedules: Schedule[] = [];
-  for (let date of DATES) {
-    schedules.push(
-      new Schedule(
-        /** Has to be in seconds */
-        // @ts-ignore
-        new Numberu64(date.getTime() / 1_000),
-        /** Don't forget to add decimals */
-        // @ts-ignore
-        new Numberu64(AMOUNT_PER_SCHEDULE * Math.pow(10, DECIMALS)),
-      ),
-    );
-  }
+  const schedule: Schedule = new Schedule(
+    /** Has to be in seconds */
+    // @ts-ignore
+    new Numberu64(60),
+    /** Don't forget to add decimals */
+    // @ts-ignore
+    new Numberu64(LOCKED_AMOUNT * Math.pow(10, DECIMALS)),
+  );
   const seed = generateRandomSeed();
 
   console.log(`Seed: ${seed}`);
@@ -112,7 +82,7 @@ const lock = async () => {
     SOURCE_TOKEN_ACCOUNT,
     DESTINATION_TOKEN_ACCOUNT,
     MINT,
-    schedules,
+    schedule,
   );
 
   const tx = await signAndSendInstructions(connection, [], wallet, instruction);
