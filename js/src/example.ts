@@ -1,7 +1,7 @@
 import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 import fs from 'fs';
 import { Numberu64, generateRandomSeed } from './utils';
-import { Schedule } from './state';
+import { CreateSchedule } from './state';
 import { create, TOKEN_VESTING_PROGRAM_ID } from './main';
 import { signAndSendInstructions } from '@bonfida/utils';
 
@@ -19,19 +19,13 @@ const wallet = Keypair.fromSecretKey(
   new Uint8Array(JSON.parse(fs.readFileSync(WALLET_PATH).toString())),
 );
 
-/** There are better way to generate an array of dates but be careful as it's irreversible */
-const DATE = new Date(2022, 12);
-
 /** Info about the desintation */
-const DESTINATION_OWNER = new PublicKey('');
-const DESTINATION_TOKEN_ACCOUNT = new PublicKey('');
+const LOCK_OWNER = new PublicKey('');
+const LOCK_OWNER_TOKEN_ACCOUNT = new PublicKey('');
 
 /** Token info */
 const MINT = new PublicKey('');
 const DECIMALS = 0;
-
-/** Info about the source */
-const SOURCE_TOKEN_ACCOUNT = new PublicKey('');
 
 /** Amount to give per schedule */
 const LOCKED_AMOUNT = 0;
@@ -42,7 +36,7 @@ const connection = new Connection('');
 /** Do some checks before sending the tokens */
 const checks = async () => {
   const tokenInfo = await connection.getParsedAccountInfo(
-    DESTINATION_TOKEN_ACCOUNT,
+    LOCK_OWNER_TOKEN_ACCOUNT,
   );
 
   // @ts-ignore
@@ -50,7 +44,7 @@ const checks = async () => {
   if (parsed.info.mint !== MINT.toBase58()) {
     throw new Error('Invalid mint');
   }
-  if (parsed.info.owner !== DESTINATION_OWNER.toBase58()) {
+  if (parsed.info.owner !== LOCK_OWNER.toBase58()) {
     throw new Error('Invalid owner');
   }
   if (parsed.info.tokenAmount.decimals !== DECIMALS) {
@@ -61,7 +55,7 @@ const checks = async () => {
 /** Function that locks the tokens */
 const lock = async () => {
   await checks();
-  const schedule: Schedule = new Schedule(
+  const schedule: CreateSchedule = new CreateSchedule(
     /** Has to be in seconds */
     // @ts-ignore
     new Numberu64(60),
@@ -78,9 +72,7 @@ const lock = async () => {
     TOKEN_VESTING_PROGRAM_ID,
     Buffer.from(seed),
     wallet.publicKey,
-    wallet.publicKey,
-    SOURCE_TOKEN_ACCOUNT,
-    DESTINATION_TOKEN_ACCOUNT,
+    LOCK_OWNER_TOKEN_ACCOUNT,
     MINT,
     schedule,
   );
