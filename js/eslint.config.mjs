@@ -43,6 +43,7 @@ export default [{
     'import/first': ['error'],
     'import/no-commonjs': ['error'],
     'import/namespace': ['warn'],
+    'import/default': ['warn'],
 
     'import/order': ['error', {
       groups: [['internal', 'external', 'builtin'], ['index', 'sibling', 'parent']],
