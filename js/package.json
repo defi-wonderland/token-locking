@@ -1,10 +1,10 @@
 {
-  "name": "@wei3erhase/token-staking",
-  "version": "0.0.4",
+  "name": "@defi-wonderland/token-locking",
+  "version": "0.0.1",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bonfida/token-vesting"
+    "url": "https://github.com/defi-wonderland/token-locking"
   },
   "publishConfig": {
     "access": "public"
