@@ -3,8 +3,7 @@ import {
   SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from '@solana/web3.js';
-import { Schedule } from './state';
-import { Numberu32 } from './utils';
+import { CreateSchedule } from './state';
 
 export enum Instruction {
   Init,
@@ -60,7 +59,7 @@ export function createCreateInstruction(
   sourceTokenAccountOwnerKey: PublicKey,
   sourceTokenAccountKey: PublicKey,
   mintAddress: PublicKey,
-  schedule: Schedule,
+  schedule: CreateSchedule,
   seeds: Array<Buffer | Uint8Array>,
 ): TransactionInstruction {
   let buffers = [

@@ -16,15 +16,15 @@ import {
   createUnlockInstruction,
   createInitializeUnlockInstruction,
 } from './instructions';
-import { ContractInfo, Schedule } from './state';
-import { assert } from 'console';
+import { ContractInfo, CreateSchedule } from './state';
 import bs58 from 'bs58';
 
 /**
- * The vesting schedule program ID on mainnet
+ * The vesting schedule program ID on testnet
+ * TODO: replace with mainnet ID
  */
 export const TOKEN_VESTING_PROGRAM_ID = new PublicKey(
-  'CChTq6PthWU82YZkbveA3WDf7s97BWhBK4Vx9bmsT743',
+  '3F15CLnQjHqMCHLn2g7vuDULiRuJDiEMSZQXMoVVUGtA',
 );
 
 /**
@@ -45,17 +45,15 @@ export async function create(
   programId: PublicKey,
   seedWord: Buffer | Uint8Array,
   payer: PublicKey,
-  sourceTokenOwner: PublicKey,
   possibleSourceTokenPubkey: PublicKey | null,
-  destinationTokenPubkey: PublicKey,
   mintAddress: PublicKey,
-  schedule: Schedule,
+  schedule: CreateSchedule,
 ): Promise<Array<TransactionInstruction>> {
   // If no source token account was given, use the associated source account
   if (possibleSourceTokenPubkey == null) {
     possibleSourceTokenPubkey = await getAssociatedTokenAddress(
       mintAddress,
-      sourceTokenOwner,
+      payer,
       true,
     );
   }
@@ -107,7 +105,7 @@ export async function create(
       SYSVAR_CLOCK_PUBKEY,
       vestingAccountKey,
       vestingTokenAccountKey,
-      sourceTokenOwner,
+      payer,
       possibleSourceTokenPubkey,
       mintAddress,
       schedule,
