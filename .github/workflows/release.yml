@@ -18,6 +18,7 @@ jobs:
         with:
           registry-url: "https://registry.npmjs.org"
           cache: "yarn"
+          cache-dependency-path: "js/yarn.lock"
 
       - name: Install Dependencies
         working-directory: ./js
