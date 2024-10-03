@@ -175,7 +175,6 @@ impl Processor {
 
         // Retrieve the clock sysvar and validate schedule time delta
         let clock = clock::Clock::from_account_info(&clock_sysvar_account)?;
-        let mut total_amount: u64 = 0;
         let release_time;
         match schedule.time_delta {
             /* Valid time_delta values:
@@ -203,17 +202,6 @@ impl Processor {
             amount: schedule.amount,
         };
         state_schedule.pack_into_slice(&mut data[VestingScheduleHeader::LEN..]);
-        let delta = total_amount.checked_add(schedule.amount);
-        match delta {
-            Some(n) => total_amount = n,
-            None => return Err(ProgramError::InvalidInstructionData), // Total amount overflows u64
-        }
-
-        // Validate that the source token account has sufficient funds
-        if Account::unpack(&source_token_account.data.borrow())?.amount < total_amount {
-            msg!("The source token account has insufficient funds.");
-            return Err(ProgramError::InsufficientFunds);
-        }
 
         // Create the transfer instruction
         let transfer_tokens_to_vesting_account = transfer(
@@ -222,7 +210,7 @@ impl Processor {
             vesting_token_account.key,
             source_token_account_owner.key,
             &[],
-            total_amount,
+            schedule.amount,
         )?;
 
         // Invoke the transfer instruction
@@ -292,7 +280,7 @@ impl Processor {
         let clock = clock::Clock::from_account_info(&clock_sysvar_account)?;
         let mut schedule = unpack_schedule(&packed_state.borrow()[VestingScheduleHeader::LEN..])?;
 
-        let mut total_amount_to_transfer = 0;
+        let mut amount_to_transfer = 0;
 
         // Ensure the schedule has been initialized (release time should not be 0)
         if schedule.release_time == 0 {
@@ -302,12 +290,12 @@ impl Processor {
 
         // Check if the release time has been reached and release the amount
         if clock.unix_timestamp as u64 >= schedule.release_time {
-            total_amount_to_transfer += schedule.amount;
+            amount_to_transfer += schedule.amount;
             schedule.amount = 0;
         }
 
         // Validate that there is an amount to transfer
-        if total_amount_to_transfer == 0 {
+        if amount_to_transfer == 0 {
             msg!("Vesting contract has not yet reached release time");
             return Err(ProgramError::InvalidArgument);
         }
@@ -319,7 +307,7 @@ impl Processor {
             destination_token_account.key,
             &vesting_account_key,
             &[],
-            total_amount_to_transfer,
+            amount_to_transfer,
         )?;
 
         // Invoke the transfer from instruction
