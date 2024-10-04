@@ -137,20 +137,20 @@ impl Processor {
             return Err(ProgramError::InvalidAccountData);
         }
         state_header.pack_into_slice(&mut data);
-        
+
         let clock = Clock::from_account_info(&clock_sysvar_account)?;
         let mut total_amount: u64 = 0;
-        
+
         // NOTE: validate time delta to be 0 (unlocked), or a set of predefined values (1 month, 3 months, ...)
         let release_time;
         match schedule.time_delta {
             /* Valid time_delta values:
-            * 0: unlocked (with 7 day withdrawal period)
-            * 12 months = 12 * 30 * 86400 = 31_104_000
-            * 18 months = 18 * 30 * 86400 = 46_656_000
-            * 24 months = 24 * 30 * 86400 = 62_208_000
-            * 36 months = 36 * 30 * 86400 = 93_312_000
-            */
+             * 0: unlocked (with 7 day withdrawal period)
+             * 12 months = 12 * 30 * 86400 = 31_104_000
+             * 18 months = 18 * 30 * 86400 = 46_656_000
+             * 24 months = 24 * 30 * 86400 = 62_208_000
+             * 36 months = 36 * 30 * 86400 = 93_312_000
+             */
             0 => {
                 release_time = 0;
             }
@@ -243,7 +243,7 @@ impl Processor {
         // Unlock the schedules that have reached maturity
         let clock = Clock::from_account_info(&clock_sysvar_account)?;
         let mut schedule = unpack_schedule(&packed_state.borrow()[VestingScheduleHeader::LEN..])?;
-        
+
         let mut total_amount_to_transfer = 0;
 
         if schedule.release_time == 0 {
@@ -343,7 +343,7 @@ impl Processor {
             msg!("Shouldn't initialize withdrawal for already initialized schedule");
             return Err(ProgramError::InvalidArgument);
         }
-        
+
         // Withdrawal period is 7 days = 7 * 86400 = 604_800
         schedule.release_time = clock.unix_timestamp as u64 + 604_800;
 
