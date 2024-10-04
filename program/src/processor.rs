@@ -23,6 +23,9 @@ use crate::{
     state::{pack_schedule_into_slice, unpack_schedule, VestingSchedule, VestingScheduleHeader},
 };
 
+pub const VALID_TOKEN_MINT: Pubkey =
+    solana_program::pubkey!("AxfBPA1yi6my7VAjqB9fqr1AgYczuuJy8tePnNUDDPpW");
+
 pub struct Processor {}
 
 impl Processor {
@@ -90,6 +93,12 @@ impl Processor {
         mint_address: &Pubkey,
         schedule: Schedule,
     ) -> ProgramResult {
+        // Validate the mint address matches the expected token address
+        if *mint_address != VALID_TOKEN_MINT {
+            msg!("Unsuported token mint address");
+            return Err(ProgramError::InvalidArgument);
+        }
+
         let accounts_iter = &mut accounts.iter();
 
         let spl_token_account = next_account_info(accounts_iter)?;
