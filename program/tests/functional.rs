@@ -108,7 +108,7 @@ async fn test_token_vesting() {
 
     let schedule = Schedule {
         amount: 100,
-        time_delta: 60,
+        time_delta: 7_776_000,
     };
 
     let test_instructions = [
