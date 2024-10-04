@@ -7,6 +7,7 @@ use solana_program::{
     program_error::PrintProgramError,
     program_error::ProgramError,
     program_pack::Pack,
+    pubkey,
     pubkey::Pubkey,
     rent::Rent,
     system_instruction::create_account,
@@ -75,6 +76,15 @@ impl Processor {
         mint_address: &Pubkey,
         schedule: Schedule,
     ) -> ProgramResult {
+        // Define the required mint address
+        const TOKEN_MINT_ADDRESS: Pubkey = pubkey!("AxfBPA1yi6my7VAjqB9fqr1AgYczuuJy8tePnNUDDPpW");
+
+        // Validate the mint address matches the expected token address
+        if *mint_address != TOKEN_MINT_ADDRESS {
+            msg!("Invalid mint address: Only 'TokenABCD' is supported.");
+            return Err(ProgramError::InvalidArgument);
+        }
+
         let accounts_iter = &mut accounts.iter();
 
         let spl_token_account = next_account_info(accounts_iter)?;
