@@ -175,6 +175,7 @@ impl Processor {
 
         // Retrieve the clock sysvar and validate schedule time delta
         let clock = clock::Clock::from_account_info(&clock_sysvar_account)?;
+
         let mut total_amount: u64 = 0;
         let release_time;
         match schedule.time_delta {
