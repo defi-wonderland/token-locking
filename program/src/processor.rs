@@ -287,6 +287,28 @@ impl Processor {
             &mut packed_state.borrow_mut()[VestingScheduleHeader::LEN..],
         );
 
+        // Create the close account instruction (refunding rent to destination account)
+        let close_account_instruction = spl_token::instruction::close_account(
+            &spl_token_account.key,
+            &vesting_token_account.key,
+            &destination_token_account.key, // Send rent back to this account
+            &vesting_account_key,
+            &[],
+        )?;
+
+        // Invoke the close account instruction
+        invoke_signed(
+            &close_account_instruction,
+            &[
+                spl_token_account.clone(),
+                vesting_token_account.clone(),
+                destination_token_account.clone(),
+                vesting_account.clone(),
+            ],
+            &[&[&seeds]],
+        )?;
+        msg!("Vesting account successfully closed and rent refunded.");
+
         Ok(())
     }
 
@@ -343,7 +365,7 @@ impl Processor {
             msg!("Shouldn't initialize withdrawal for already initialized schedule");
             return Err(ProgramError::InvalidArgument);
         }
-        
+
         // Withdrawal period is 7 days = 7 * 86400 = 604_800
         schedule.release_time = clock.unix_timestamp as u64 + 604_800;
 
