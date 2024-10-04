@@ -141,20 +141,20 @@ impl Processor {
         let clock = Clock::from_account_info(&clock_sysvar_account)?;
         let mut total_amount: u64 = 0;
 
-        // NOTE: validate time delta to be 0 (unlocked), or a set of predefined values (1 month, 3 months, ...)
+        // NOTE: validate time delta to be 0 (unlocked), or a set of predefined values (3 month, 6 months, ...)
         let release_time;
         match schedule.time_delta {
             /* Valid time_delta values:
              * 0: unlocked (with 7 day withdrawal period)
+             * 3 months = 3 * 30 * 86400 = 7_776_000
+             * 6 months = 6 * 30 * 86400 = 15_552_000
+             * 9 months = 9 * 30 * 86400 = 23_328_000
              * 12 months = 12 * 30 * 86400 = 31_104_000
-             * 18 months = 18 * 30 * 86400 = 46_656_000
-             * 24 months = 24 * 30 * 86400 = 62_208_000
-             * 36 months = 36 * 30 * 86400 = 93_312_000
              */
             0 => {
                 release_time = 0;
             }
-            31_104_000 | 46_656_000 | 62_208_000 | 93_312_000 => {
+            7_776_000 | 15_552_000 | 23_328_000 | 31_104_000 => {
                 release_time = clock.unix_timestamp as u64 + schedule.time_delta;
             }
             _ => {
