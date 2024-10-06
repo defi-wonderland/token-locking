@@ -20,15 +20,22 @@ import { ContractInfo, CreateSchedule } from './state';
 import bs58 from 'bs58';
 
 /**
- * The vesting schedule program ID on testnet
- * TODO: replace with mainnet ID
+ * The vesting schedule program ID
  */
-export const TOKEN_VESTING_PROGRAM_ID = new PublicKey(
-  'HGhyAuNiYRa6oN55eGGP1MYGVve7epwT8WX6qbWxgYxM',
+export const VESTING_PROGRAM_ID = new PublicKey(
+  'BHJWdCprG1HUiCZh1jhA4mJfAiXEGJXUn4pjnZXB3fGp'
 );
 
 export const TOKEN_MINT = new PublicKey(
-  'EWMA3o2kHLpsVYvmjtvYRywHrXD84sLxFb42seUShxAD',
+  'AxfBPA1yi6my7VAjqB9fqr1AgYczuuJy8tePnNUDDPpW'
+);
+
+export const DEVNET_VESTING_PROGRAM_ID = new PublicKey(
+  'HGhyAuNiYRa6oN55eGGP1MYGVve7epwT8WX6qbWxgYxM'
+);
+
+export const DEVNET_TOKEN_MINT = new PublicKey(
+  'FrnSwyMzw2u6DB2bQUTpia9mRHqeujdUF2bomY8Zt5BX',
 );
 
 /**
