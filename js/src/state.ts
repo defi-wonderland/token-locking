@@ -45,26 +45,18 @@ export class Schedule {
 
 export class VestingScheduleHeader {
   destinationAddress!: PublicKey;
-  mintAddress!: PublicKey;
   isInitialized!: boolean;
 
-  constructor(
-    destinationAddress: PublicKey,
-    mintAddress: PublicKey,
-    isInitialized: boolean,
-  ) {
+  constructor(destinationAddress: PublicKey, isInitialized: boolean) {
     this.destinationAddress = destinationAddress;
-    this.mintAddress = mintAddress;
     this.isInitialized = isInitialized;
   }
 
   static fromBuffer(buf: Buffer): VestingScheduleHeader {
     const destinationAddress = new PublicKey(buf.slice(0, 32));
-    const mintAddress = new PublicKey(buf.slice(32, 64));
-    const isInitialized = buf[64] == 1;
+    const isInitialized = buf[32] == 1;
     const header: VestingScheduleHeader = {
       destinationAddress,
-      mintAddress,
       isInitialized,
     };
     return header;
@@ -73,29 +65,19 @@ export class VestingScheduleHeader {
 
 export class ContractInfo {
   destinationAddress!: PublicKey;
-  mintAddress!: PublicKey;
   schedule!: Schedule;
 
-  constructor(
-    destinationAddress: PublicKey,
-    mintAddress: PublicKey,
-    schedule: Schedule,
-  ) {
+  constructor(destinationAddress: PublicKey, schedule: Schedule) {
     this.destinationAddress = destinationAddress;
-    this.mintAddress = mintAddress;
     this.schedule = schedule;
   }
 
   static fromBuffer(buf: Buffer): ContractInfo | undefined {
-    const header = VestingScheduleHeader.fromBuffer(buf.slice(0, 65));
+    const header = VestingScheduleHeader.fromBuffer(buf.slice(0, 33));
     if (!header.isInitialized) {
       return undefined;
     }
-    const schedule = Schedule.fromBuffer(buf.slice(65, 81));
-    return new ContractInfo(
-      header.destinationAddress,
-      header.mintAddress,
-      schedule,
-    );
+    const schedule = Schedule.fromBuffer(buf.slice(33, 49));
+    return new ContractInfo(header.destinationAddress, schedule);
   }
 }

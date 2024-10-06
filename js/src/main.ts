@@ -24,7 +24,11 @@ import bs58 from 'bs58';
  * TODO: replace with mainnet ID
  */
 export const TOKEN_VESTING_PROGRAM_ID = new PublicKey(
-  '3F15CLnQjHqMCHLn2g7vuDULiRuJDiEMSZQXMoVVUGtA',
+  'HGhyAuNiYRa6oN55eGGP1MYGVve7epwT8WX6qbWxgYxM',
+);
+
+export const TOKEN_MINT = new PublicKey(
+  'EWMA3o2kHLpsVYvmjtvYRywHrXD84sLxFb42seUShxAD',
 );
 
 /**
@@ -46,13 +50,12 @@ export async function create(
   seedWord: Buffer | Uint8Array,
   payer: PublicKey,
   possibleSourceTokenPubkey: PublicKey | null,
-  mintAddress: PublicKey,
   schedule: CreateSchedule,
 ): Promise<Array<TransactionInstruction>> {
   // If no source token account was given, use the associated source account
   if (possibleSourceTokenPubkey == null) {
     possibleSourceTokenPubkey = await getAssociatedTokenAddress(
-      mintAddress,
+      TOKEN_MINT,
       payer,
       true,
     );
@@ -66,7 +69,7 @@ export async function create(
   );
 
   const vestingTokenAccountKey = await getAssociatedTokenAddress(
-    mintAddress,
+    TOKEN_MINT,
     vestingAccountKey,
     true,
   );
@@ -97,7 +100,7 @@ export async function create(
       payer,
       vestingTokenAccountKey,
       vestingAccountKey,
-      mintAddress,
+      TOKEN_MINT,
     ),
     createCreateInstruction(
       programId,
@@ -107,7 +110,6 @@ export async function create(
       vestingTokenAccountKey,
       payer,
       possibleSourceTokenPubkey,
-      mintAddress,
       schedule,
       [seedWord],
     ),
@@ -127,7 +129,6 @@ export async function unlock(
   connection: Connection,
   programId: PublicKey,
   seedWord: Buffer | Uint8Array,
-  mintAddress: PublicKey,
 ): Promise<Array<TransactionInstruction>> {
   seedWord = seedWord.slice(0, 31);
   const [vestingAccountKey, bump] = await PublicKey.findProgramAddress(
@@ -137,7 +138,7 @@ export async function unlock(
   seedWord = Buffer.from(seedWord.toString('hex') + bump.toString(16), 'hex');
 
   const vestingTokenAccountKey = await getAssociatedTokenAddress(
-    mintAddress,
+    TOKEN_MINT,
     vestingAccountKey,
     true,
   );
@@ -171,7 +172,6 @@ export async function initializeUnlock(
   connection: Connection,
   programId: PublicKey,
   seedWord: Buffer | Uint8Array,
-  mintAddress: PublicKey,
 ): Promise<Array<TransactionInstruction>> {
   seedWord = seedWord.slice(0, 31);
   const [vestingAccountKey, bump] = await PublicKey.findProgramAddress(
@@ -181,7 +181,7 @@ export async function initializeUnlock(
   seedWord = Buffer.from(seedWord.toString('hex') + bump.toString(16), 'hex');
 
   const vestingTokenAccountKey = await getAssociatedTokenAddress(
-    mintAddress,
+    TOKEN_MINT,
     vestingAccountKey,
     true,
   );
