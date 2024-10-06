@@ -14,41 +14,32 @@ pub struct VestingSchedule {
 #[derive(Debug, PartialEq)]
 pub struct VestingScheduleHeader {
     pub destination_address: Pubkey,
-    pub mint_address: Pubkey,
     pub is_initialized: bool,
 }
 
 impl Sealed for VestingScheduleHeader {}
 
 impl Pack for VestingScheduleHeader {
-    const LEN: usize = 65;
+    const LEN: usize = 33;
 
     fn pack_into_slice(&self, target: &mut [u8]) {
         let destination_address_bytes = self.destination_address.to_bytes();
-        let mint_address_bytes = self.mint_address.to_bytes();
         for i in 0..32 {
             target[i] = destination_address_bytes[i];
         }
 
-        for i in 32..64 {
-            target[i] = mint_address_bytes[i - 32];
-        }
-
-        target[64] = self.is_initialized as u8;
+        target[32] = self.is_initialized as u8;
     }
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-        if src.len() < 65 {
+        if src.len() < Self::LEN {
             return Err(ProgramError::InvalidAccountData);
         }
         let destination_address =
             Pubkey::try_from(&src[..32]).map_err(|_| ProgramError::InvalidArgument)?;
-        let mint_address =
-            Pubkey::try_from(&src[32..64]).map_err(|_| ProgramError::InvalidArgument)?;
-        let is_initialized = src[64] == 1;
+        let is_initialized = src[32] == 1;
         Ok(Self {
             destination_address,
-            mint_address,
             is_initialized,
         })
     }
@@ -72,7 +63,7 @@ impl Pack for VestingSchedule {
     }
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, ProgramError> {
-        if src.len() < 16 {
+        if src.len() < Self::LEN {
             return Err(ProgramError::InvalidAccountData);
         }
         let release_time = u64::from_le_bytes(src[0..8].try_into().unwrap());
@@ -109,7 +100,6 @@ mod tests {
     fn test_state_packing() {
         let header_state = VestingScheduleHeader {
             destination_address: Pubkey::new_unique(),
-            mint_address: Pubkey::new_unique(),
             is_initialized: true,
         };
         let schedule_state = VestingSchedule {
@@ -117,7 +107,7 @@ mod tests {
             amount: 969,
         };
         let state_size = VestingScheduleHeader::LEN + VestingSchedule::LEN;
-        let mut state_array = [0u8; 81];
+        let mut state_array = [0u8; 49];
         header_state.pack_into_slice(&mut state_array[..VestingScheduleHeader::LEN]);
         schedule_state.pack_into_slice(
             &mut state_array
@@ -126,7 +116,6 @@ mod tests {
         let packed = Vec::from(state_array);
         let mut expected = Vec::with_capacity(state_size);
         expected.extend_from_slice(&header_state.destination_address.to_bytes());
-        expected.extend_from_slice(&header_state.mint_address.to_bytes());
         expected.extend_from_slice(&[header_state.is_initialized as u8]);
         expected.extend_from_slice(&schedule_state.release_time.to_le_bytes());
         expected.extend_from_slice(&schedule_state.amount.to_le_bytes());

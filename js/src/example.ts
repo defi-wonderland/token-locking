@@ -2,12 +2,17 @@ import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 import fs from 'fs';
 import { Numberu64, generateRandomSeed } from './utils';
 import { CreateSchedule } from './state';
-import { create, TOKEN_VESTING_PROGRAM_ID } from './main';
+import {
+  create,
+  VESTING_PROGRAM_ID,
+  DEVNET_VESTING_PROGRAM_ID,
+  TOKEN_MINT,
+  initializeUnlock,
+  unlock,
+} from './main';
 import { signAndSendInstructions } from '@bonfida/utils';
 
 /**
- *
- * Simple example of a linear unlock.
  *
  * This is just an example, please be careful using the vesting contract and test it first with test tokens.
  *
@@ -23,15 +28,19 @@ const wallet = Keypair.fromSecretKey(
 const LOCK_OWNER = new PublicKey('');
 const LOCK_OWNER_TOKEN_ACCOUNT = new PublicKey('');
 
-/** Token info */
-const MINT = new PublicKey('');
-const DECIMALS = 0;
+/** Info about the deposit (to interact with) */
+const LOCK_SEED = '';
 
-/** Amount to give per schedule */
-const LOCKED_AMOUNT = 0;
+/** Token info */
+const DECIMALS = 9;
+
+/** Amount to lock */
+const LOCKED_AMOUNT = 10;
 
 /** Your RPC connection */
 const connection = new Connection('');
+const DEVNET = true;
+const program = DEVNET ? DEVNET_VESTING_PROGRAM_ID : VESTING_PROGRAM_ID;
 
 /** Do some checks before sending the tokens */
 const checks = async () => {
@@ -41,7 +50,7 @@ const checks = async () => {
 
   // @ts-ignore
   const parsed = tokenInfo.value.data.parsed;
-  if (parsed.info.mint !== MINT.toBase58()) {
+  if (parsed.info.mint !== TOKEN_MINT.toBase58()) {
     throw new Error('Invalid mint');
   }
   if (parsed.info.owner !== LOCK_OWNER.toBase58()) {
@@ -56,10 +65,9 @@ const checks = async () => {
 const lock = async () => {
   await checks();
   const schedule: CreateSchedule = new CreateSchedule(
-    /** Has to be in seconds */
+    /** Has to be 0 | 3 | 6 | 12 mths (in seconds) */
     // @ts-ignore
-    new Numberu64(60),
-    /** Don't forget to add decimals */
+    new Numberu64(0), // unlocked with withdrawal period
     // @ts-ignore
     new Numberu64(LOCKED_AMOUNT * Math.pow(10, DECIMALS)),
   );
@@ -69,26 +77,49 @@ const lock = async () => {
 
   const instruction = await create(
     connection,
-    TOKEN_VESTING_PROGRAM_ID,
+    program,
+    // @ts-ignore
     Buffer.from(seed),
     wallet.publicKey,
     LOCK_OWNER_TOKEN_ACCOUNT,
-    MINT,
     schedule,
   );
 
   const tx = await signAndSendInstructions(connection, [], wallet, instruction);
 
   console.log(`Transaction: ${tx}`);
+};
 
-  const txInfo = await connection.getConfirmedTransaction(tx, 'confirmed');
-  if (txInfo && !txInfo.meta?.err) {
-    console.log(
-      txInfo?.transaction.instructions[2].data.slice(1, 32 + 1).toString('hex'),
-    );
-  } else {
-    throw new Error('Transaction not confirmed.');
-  }
+const initUnlock = async () => {
+  await checks();
+
+  const instruction = await initializeUnlock(
+    connection,
+    VESTING_PROGRAM_ID,
+    // @ts-ignore
+    Buffer.from(LOCK_SEED),
+  );
+
+  const tx = await signAndSendInstructions(connection, [], wallet, instruction);
+
+  console.log(`Transaction: ${tx}`);
+};
+
+const withdraw = async () => {
+  await checks();
+
+  const instruction = await unlock(
+    connection,
+    program,
+    // @ts-ignore
+    Buffer.from(LOCK_SEED),
+  );
+
+  const tx = await signAndSendInstructions(connection, [], wallet, instruction);
+
+  console.log(`Transaction: ${tx}`);
 };
 
 lock();
+// initUnlock();
+// withdraw();

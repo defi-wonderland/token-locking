@@ -120,7 +120,6 @@ async fn test_token_vesting() {
             &vesting_token_account.pubkey(),
             &source_account.pubkey(),
             &source_token_account.pubkey(),
-            &mint.pubkey(),
             schedule,
             seeds.clone(),
         )
@@ -271,7 +270,6 @@ async fn test_token_unlocking() {
                 &vesting_token_account.pubkey(),
                 &source_account.pubkey(),
                 &source_token_account.pubkey(),
-                &mint.pubkey(),
                 schedule,
                 seeds.clone(),
             )

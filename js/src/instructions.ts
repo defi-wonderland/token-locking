@@ -58,15 +58,10 @@ export function createCreateInstruction(
   vestingTokenAccountKey: PublicKey,
   sourceTokenAccountOwnerKey: PublicKey,
   sourceTokenAccountKey: PublicKey,
-  mintAddress: PublicKey,
   schedule: CreateSchedule,
   seeds: Array<Buffer | Uint8Array>,
 ): TransactionInstruction {
-  let buffers = [
-    Buffer.from(Int8Array.from([1]).buffer),
-    Buffer.concat(seeds),
-    mintAddress.toBuffer(),
-  ];
+  let buffers = [Buffer.from(Int8Array.from([1]).buffer), Buffer.concat(seeds)];
 
   buffers.push(schedule.toBuffer());
 
