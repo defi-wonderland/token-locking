@@ -25,11 +25,9 @@ impl Arbitrary for VestingInstruction {
             1 => {
                 let schedule: [Schedule; 10] = u.arbitrary()?;
                 let key_bytes: [u8; 32] = u.arbitrary()?;
-                let mint_address: Pubkey = Pubkey::new_from_array(key_bytes);
                 let key_bytes: [u8; 32] = u.arbitrary()?;
                 return Ok(Self::Create {
                     seeds,
-                    mint_address,
                     schedule: schedule,
                 });
             }
@@ -79,7 +77,6 @@ pub enum VestingInstruction {
     ///   4. `[writable]` The source spl-token account
     Create {
         seeds: [u8; 32],
-        mint_address: Pubkey,
         schedule: Schedule,
     },
     /// Unlocks a simple vesting contract (SVC) - can only be invoked by the program itself
@@ -122,12 +119,7 @@ impl VestingInstruction {
                     .get(..32)
                     .and_then(|slice| slice.try_into().ok())
                     .unwrap();
-                let mint_address = rest
-                    .get(32..64)
-                    .and_then(|slice| slice.try_into().ok())
-                    .map(Pubkey::new_from_array)
-                    .ok_or(InvalidInstruction)?;
-                let offset = 64;
+                let offset = 32;
                 let time_delta = rest
                     .get(offset..offset + 8)
                     .and_then(|slice| slice.try_into().ok())
@@ -141,7 +133,6 @@ impl VestingInstruction {
                 let schedule = Schedule { time_delta, amount };
                 Self::Create {
                     seeds,
-                    mint_address,
                     schedule,
                 }
             }
@@ -171,12 +162,10 @@ impl VestingInstruction {
             }
             Self::Create {
                 seeds,
-                mint_address,
                 schedule,
             } => {
                 buf.push(1);
                 buf.extend_from_slice(seeds);
-                buf.extend_from_slice(&mint_address.to_bytes());
                 buf.extend_from_slice(&schedule.time_delta.to_le_bytes());
                 buf.extend_from_slice(&schedule.amount.to_le_bytes());
             }
@@ -225,12 +214,10 @@ pub fn create(
     vesting_token_account_key: &Pubkey,
     source_token_account_owner_key: &Pubkey,
     source_token_account_key: &Pubkey,
-    mint_address: &Pubkey,
     schedule: Schedule,
     seeds: [u8; 32],
 ) -> Result<Instruction, ProgramError> {
     let data = VestingInstruction::Create {
-        mint_address: *mint_address,
         seeds,
         schedule,
     }
@@ -306,7 +293,6 @@ mod test {
 
     #[test]
     fn test_instruction_packing() {
-        let mint_address = Pubkey::new_unique();
 
         let original_create = VestingInstruction::Create {
             seeds: [50u8; 32],
@@ -314,7 +300,6 @@ mod test {
                 amount: 42,
                 time_delta: 250,
             },
-            mint_address: mint_address.clone(),
         };
         let packed_create = original_create.pack();
         let unpacked_create = VestingInstruction::unpack(&packed_create).unwrap();

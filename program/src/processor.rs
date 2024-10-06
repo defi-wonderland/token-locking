@@ -23,8 +23,8 @@ use crate::{
     state::{pack_schedule_into_slice, unpack_schedule, VestingSchedule, VestingScheduleHeader},
 };
 
-pub const VALID_TOKEN_MINT: Pubkey =
-    solana_program::pubkey!("AxfBPA1yi6my7VAjqB9fqr1AgYczuuJy8tePnNUDDPpW");
+pub const TOKEN_MINT: Pubkey =
+    solana_program::pubkey!("EWMA3o2kHLpsVYvmjtvYRywHrXD84sLxFb42seUShxAD");
 
 pub struct Processor {}
 
@@ -90,14 +90,8 @@ impl Processor {
         program_id: &Pubkey,
         accounts: &[AccountInfo],
         seeds: [u8; 32],
-        mint_address: &Pubkey,
         schedule: Schedule,
     ) -> ProgramResult {
-        // Validate the mint address matches the expected token address
-        if *mint_address != VALID_TOKEN_MINT {
-            msg!("Unsuported token mint address");
-            return Err(ProgramError::InvalidArgument);
-        }
 
         let accounts_iter = &mut accounts.iter();
 
@@ -107,6 +101,15 @@ impl Processor {
         let vesting_token_account = next_account_info(accounts_iter)?;
         let source_token_account_owner = next_account_info(accounts_iter)?;
         let source_token_account = next_account_info(accounts_iter)?;
+            
+        // Deserialize the account data into the TokenAccount struct
+        let token_account = Account::unpack(&source_token_account.data.borrow())?;
+
+        // Validate the mint address matches the expected token address
+        if token_account.mint != TOKEN_MINT {
+            msg!("Invalid token mint address");
+            return Err(ProgramError::InvalidArgument);
+        }
 
         // Validate the SPL Token Program account
         if spl_token_account.key != &spl_token::id() {
@@ -171,7 +174,6 @@ impl Processor {
         // Pack the vesting schedule header into the vesting account data
         let state_header = VestingScheduleHeader {
             destination_address: *source_token_account.key,
-            mint_address: *mint_address,
             is_initialized: true,
         };
 
@@ -467,11 +469,10 @@ impl Processor {
             }
             VestingInstruction::Create {
                 seeds,
-                mint_address,
                 schedule,
             } => {
                 msg!("Instruction: Create Schedule");
-                Self::process_create(program_id, accounts, seeds, &mint_address, schedule)
+                Self::process_create(program_id, accounts, seeds, schedule)
             }
         }
     }
