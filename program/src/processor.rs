@@ -269,6 +269,12 @@ impl Processor {
             return Err(ProgramError::InvalidArgument);
         }
 
+        // Validate that the vesting account is owned by the program
+        if *vesting_account.owner != *program_id {
+            msg!("Vesting account is not owned by this program");
+            return Err(ProgramError::InvalidArgument);
+        }
+
         // Validate that the vesting account public key is derived from the seeds
         let vesting_account_key = Pubkey::create_program_address(&[&seeds], program_id)?;
         if vesting_account_key != *vesting_account.key {
