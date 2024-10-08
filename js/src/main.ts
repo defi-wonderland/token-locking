@@ -23,11 +23,11 @@ import bs58 from 'bs58';
  * The vesting schedule program ID
  */
 export const VESTING_PROGRAM_ID = new PublicKey(
-  'AKUgi92CLv6ce4d6MNHZXeKUFU2SbnAzLc77JN63EGBA'
+  'HE6bCtjsrra8DRbJnexKoVPSr5dYs57s3cuGHfotiQbq'
 );
 
 export const TOKEN_MINT = new PublicKey(
-  'FGG8y8JrZrAinbBwWAB2EacQgZVyzoerdMsU1LUaRkKv'
+  '5k84VjAKoGPXa7ias1BNgKUrX7e61eMPWhZDqsiD4Bpe'
 );
 
 export const DEVNET_VESTING_PROGRAM_ID = new PublicKey(
