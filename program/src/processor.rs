@@ -199,7 +199,7 @@ impl Processor {
             0 => {
                 release_time = 0;
             }
-            7_776_000 | 15_552_000 | 23_328_000 | 31_104_000 => {
+            1800 | 3600 | 5400 | 7200 => {
                 release_time = clock.unix_timestamp as u64 + schedule.time_delta;
             }
             _ => {
@@ -435,7 +435,7 @@ impl Processor {
         }
 
         // Withdrawal period is 7 days = 7 * 86400 = 604_800
-        schedule.release_time = clock.unix_timestamp as u64 + 604_800;
+        schedule.release_time = clock.unix_timestamp as u64 + 1800;
 
         // Pack the updated schedule back into the account data
         pack_schedule_into_slice(
