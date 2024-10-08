@@ -24,7 +24,7 @@ use crate::{
 };
 
 pub const TOKEN_MINT: Pubkey =
-    solana_program::pubkey!("2ummN5q6x8iQid7BFcRp7oMgF3UMEXR8LrUSPYzuMHQH");
+    solana_program::pubkey!("BfCXVtDqQZbEr7TCppF5Mw4ZL5u67LrzTWQpoH5okFEt");
 
 pub struct Processor {}
 
