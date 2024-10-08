@@ -27,7 +27,7 @@ export const VESTING_PROGRAM_ID = new PublicKey(
 );
 
 export const TOKEN_MINT = new PublicKey(
-  'BfCXVtDqQZbEr7TCppF5Mw4ZL5u67LrzTWQpoH5okFEt'
+  'CivjW7ZGp7eaubEdGoDeVsTrYYRnyTf5mrp9pET7KFuk'
 );
 
 export const DEVNET_VESTING_PROGRAM_ID = new PublicKey(
