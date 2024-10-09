@@ -1,11 +1,3 @@
-/target
-.DS_Store
+target
 .vscode
-
-*/node_modules
-js/lib
-js/dist
-
-/node_modules
-
-**/wallet.json
+hfuzz*
