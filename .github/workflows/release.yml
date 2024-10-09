@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          registry-url: "https://registry.npmjs.org"
+          cache: "yarn"
+          cache-dependency-path: "js/yarn.lock"
+
+      - name: Install Dependencies
+        working-directory: ./js
+        run: yarn --frozen-lockfile
+
+      - name: Build
+        working-directory: ./js
+        run: yarn build
+
+      - name: Publish
+        working-directory: ./js
+        run: yarn publish --access public --tag latest
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

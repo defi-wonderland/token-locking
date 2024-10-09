@@ -16,15 +16,26 @@ import {
   createUnlockInstruction,
   createInitializeUnlockInstruction,
 } from './instructions';
-import { ContractInfo, Schedule } from './state';
-import { assert } from 'console';
+import { ContractInfo, CreateSchedule } from './state';
 import bs58 from 'bs58';
 
 /**
- * The vesting schedule program ID on mainnet
+ * The vesting schedule program ID
  */
-export const TOKEN_VESTING_PROGRAM_ID = new PublicKey(
-  'CChTq6PthWU82YZkbveA3WDf7s97BWhBK4Vx9bmsT743',
+export const VESTING_PROGRAM_ID = new PublicKey(
+  'HE6bCtjsrra8DRbJnexKoVPSr5dYs57s3cuGHfotiQbq'
+);
+
+export const TOKEN_MINT = new PublicKey(
+  '5k84VjAKoGPXa7ias1BNgKUrX7e61eMPWhZDqsiD4Bpe'
+);
+
+export const DEVNET_VESTING_PROGRAM_ID = new PublicKey(
+  '5UmrfVDhyotfF6Dufved4yjFPCVJdNHu22u1e6ohSyn6'
+);
+
+export const DEVNET_TOKEN_MINT = new PublicKey(
+  'FrnSwyMzw2u6DB2bQUTpia9mRHqeujdUF2bomY8Zt5BX',
 );
 
 /**
@@ -45,17 +56,14 @@ export async function create(
   programId: PublicKey,
   seedWord: Buffer | Uint8Array,
   payer: PublicKey,
-  sourceTokenOwner: PublicKey,
   possibleSourceTokenPubkey: PublicKey | null,
-  destinationTokenPubkey: PublicKey,
-  mintAddress: PublicKey,
-  schedule: Schedule,
+  schedule: CreateSchedule,
 ): Promise<Array<TransactionInstruction>> {
   // If no source token account was given, use the associated source account
   if (possibleSourceTokenPubkey == null) {
     possibleSourceTokenPubkey = await getAssociatedTokenAddress(
-      mintAddress,
-      sourceTokenOwner,
+      TOKEN_MINT,
+      payer,
       true,
     );
   }
@@ -68,7 +76,7 @@ export async function create(
   );
 
   const vestingTokenAccountKey = await getAssociatedTokenAddress(
-    mintAddress,
+    TOKEN_MINT,
     vestingAccountKey,
     true,
   );
@@ -99,7 +107,7 @@ export async function create(
       payer,
       vestingTokenAccountKey,
       vestingAccountKey,
-      mintAddress,
+      TOKEN_MINT,
     ),
     createCreateInstruction(
       programId,
@@ -107,9 +115,8 @@ export async function create(
       SYSVAR_CLOCK_PUBKEY,
       vestingAccountKey,
       vestingTokenAccountKey,
-      sourceTokenOwner,
+      payer,
       possibleSourceTokenPubkey,
-      mintAddress,
       schedule,
       [seedWord],
     ),
@@ -129,7 +136,6 @@ export async function unlock(
   connection: Connection,
   programId: PublicKey,
   seedWord: Buffer | Uint8Array,
-  mintAddress: PublicKey,
 ): Promise<Array<TransactionInstruction>> {
   seedWord = seedWord.slice(0, 31);
   const [vestingAccountKey, bump] = await PublicKey.findProgramAddress(
@@ -139,7 +145,7 @@ export async function unlock(
   seedWord = Buffer.from(seedWord.toString('hex') + bump.toString(16), 'hex');
 
   const vestingTokenAccountKey = await getAssociatedTokenAddress(
-    mintAddress,
+    TOKEN_MINT,
     vestingAccountKey,
     true,
   );
@@ -173,7 +179,6 @@ export async function initializeUnlock(
   connection: Connection,
   programId: PublicKey,
   seedWord: Buffer | Uint8Array,
-  mintAddress: PublicKey,
 ): Promise<Array<TransactionInstruction>> {
   seedWord = seedWord.slice(0, 31);
   const [vestingAccountKey, bump] = await PublicKey.findProgramAddress(
@@ -183,7 +188,7 @@ export async function initializeUnlock(
   seedWord = Buffer.from(seedWord.toString('hex') + bump.toString(16), 'hex');
 
   const vestingTokenAccountKey = await getAssociatedTokenAddress(
-    mintAddress,
+    TOKEN_MINT,
     vestingAccountKey,
     true,
   );

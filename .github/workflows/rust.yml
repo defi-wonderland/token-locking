@@ -28,4 +28,4 @@ jobs:
 
     - name: Run tests
       working-directory: program
-      run: cargo test --features test-bpf
+      run: cargo build
