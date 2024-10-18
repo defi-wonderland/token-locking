@@ -31,11 +31,11 @@ export const TOKEN_MINT = new PublicKey(
 );
 
 export const DEVNET_VESTING_PROGRAM_ID = new PublicKey(
-  'B6o6erKW2Vi9Nidtv4wfT8JRtdFS2W5GX1V9bJEVr9Lv'
+  'Ct3LoBZ2Sk2h4SUVNCoZ9ooTn7pW2XW9YCaHbMixapQf'
 );
 
 export const DEVNET_TOKEN_MINT = new PublicKey(
-  'FrnSwyMzw2u6DB2bQUTpia9mRHqeujdUF2bomY8Zt5BX',
+  'BNFpmYoKoqkNnQ6g7FkEsbLwVnjtbjSF86GBScDXHkrv',
 );
 
 /**
