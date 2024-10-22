@@ -31,11 +31,11 @@ export const TOKEN_MINT = new PublicKey(
 );
 
 export const DEVNET_VESTING_PROGRAM_ID = new PublicKey(
-  'Ct3LoBZ2Sk2h4SUVNCoZ9ooTn7pW2XW9YCaHbMixapQf'
+  'B6o6erKW2Vi9Nidtv4wfT8JRtdFS2W5GX1V9bJEVr9Lv'
 );
 
 export const DEVNET_TOKEN_MINT = new PublicKey(
-  'BNFpmYoKoqkNnQ6g7FkEsbLwVnjtbjSF86GBScDXHkrv',
+  'FrnSwyMzw2u6DB2bQUTpia9mRHqeujdUF2bomY8Zt5BX',
 );
 
 /**
@@ -44,10 +44,7 @@ export const DEVNET_TOKEN_MINT = new PublicKey(
  * @param programId The token vesting program ID
  * @param seedWord Seed words used to derive the vesting account
  * @param payer The fee payer of the transaction
- * @param sourceTokenOwner The owner of the source token account (i.e where locked tokens are originating from)
  * @param possibleSourceTokenPubkey The source token account (i.e where locked tokens are originating from), if null it defaults to the ATA
- * @param destinationTokenPubkey The destination token account i.e where unlocked tokens will be transfered
- * @param mintAddress The mint of the tokens being vested
  * @param schedule The vesting schedule
  * @returns An array of `TransactionInstruction`
  */
@@ -62,7 +59,7 @@ export async function create(
   // If no source token account was given, use the associated source account
   if (possibleSourceTokenPubkey == null) {
     possibleSourceTokenPubkey = await getAssociatedTokenAddress(
-      TOKEN_MINT,
+      isDevnetConnection(connection)? DEVNET_TOKEN_MINT : TOKEN_MINT,
       payer,
       true,
     );
@@ -76,7 +73,7 @@ export async function create(
   );
 
   const vestingTokenAccountKey = await getAssociatedTokenAddress(
-    TOKEN_MINT,
+    isDevnetConnection(connection)? DEVNET_TOKEN_MINT : TOKEN_MINT,
     vestingAccountKey,
     true,
   );
@@ -107,7 +104,7 @@ export async function create(
       payer,
       vestingTokenAccountKey,
       vestingAccountKey,
-      TOKEN_MINT,
+      isDevnetConnection(connection)? DEVNET_TOKEN_MINT : TOKEN_MINT,
     ),
     createCreateInstruction(
       programId,
@@ -129,7 +126,6 @@ export async function create(
  * @param connection The Solana RPC connection object
  * @param programId The token vesting program ID
  * @param seedWord Seed words used to derive the vesting account
- * @param mintAddress The mint of the vested tokens
  * @returns An array of `TransactionInstruction`
  */
 export async function unlock(
@@ -145,7 +141,7 @@ export async function unlock(
   seedWord = Buffer.from(seedWord.toString('hex') + bump.toString(16), 'hex');
 
   const vestingTokenAccountKey = await getAssociatedTokenAddress(
-    TOKEN_MINT,
+    isDevnetConnection(connection)? DEVNET_TOKEN_MINT : TOKEN_MINT,
     vestingAccountKey,
     true,
   );
@@ -188,7 +184,7 @@ export async function initializeUnlock(
   seedWord = Buffer.from(seedWord.toString('hex') + bump.toString(16), 'hex');
 
   const vestingTokenAccountKey = await getAssociatedTokenAddress(
-    TOKEN_MINT,
+    isDevnetConnection(connection)? DEVNET_TOKEN_MINT : TOKEN_MINT,
     vestingAccountKey,
     true,
   );
@@ -233,4 +229,28 @@ export async function getContractInfo(
     throw new Error('Vesting contract account is not initialized');
   }
   return info!;
+}
+
+/**
+ * This function can be used to retrieve the cluster of the connection ("mainnet" or "devnet")
+ * @param connection The Solana RPC connection object
+ * @returns A boolean value indicating if the connection is a devnet connection
+ */
+export function isDevnetConnection(connection: Connection): Boolean {
+  const endpoint = connection.rpcEndpoint;
+  
+  if (endpoint.includes('devnet')) {
+    return true;
+  } else return false;
+}
+
+/**
+ * This function can be used to retrieve the program ID based on the connection
+ * @param connection The Solana RPC connection object
+ * @returns A PublicKey object representing the program ID
+ */
+export function getProgramId(connection: Connection): PublicKey {
+  if (isDevnetConnection(connection)) {
+    return DEVNET_VESTING_PROGRAM_ID;
+  } else return VESTING_PROGRAM_ID;
 }
