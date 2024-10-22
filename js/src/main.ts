@@ -254,3 +254,14 @@ export function getProgramId(connection: Connection): PublicKey {
     return DEVNET_VESTING_PROGRAM_ID;
   } else return VESTING_PROGRAM_ID;
 }
+
+/**
+ * This function can be used to retrieve the token mint based on the connection
+ * @param connection The Solana RPC connection object
+ * @returns A PublicKey object representing the token mint
+ */
+export function getTokenMint(connection: Connection): PublicKey {
+  if (isDevnetConnection(connection)) {
+    return DEVNET_TOKEN_MINT;
+  } else return TOKEN_MINT;
+}

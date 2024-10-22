@@ -4,11 +4,10 @@ import { Numberu64, generateRandomSeed } from './utils';
 import { CreateSchedule } from './state';
 import {
   create,
-  VESTING_PROGRAM_ID,
-  DEVNET_VESTING_PROGRAM_ID,
-  TOKEN_MINT,
   initializeUnlock,
   unlock,
+  getTokenMint,
+  getProgramId,
 } from './main';
 import { signAndSendInstructions } from '@bonfida/utils';
 
@@ -39,8 +38,6 @@ const LOCKED_AMOUNT = 10;
 
 /** Your RPC connection */
 const connection = new Connection('');
-const DEVNET = true;
-const program = DEVNET ? DEVNET_VESTING_PROGRAM_ID : VESTING_PROGRAM_ID;
 
 /** Do some checks before sending the tokens */
 const checks = async () => {
@@ -50,7 +47,7 @@ const checks = async () => {
 
   // @ts-ignore
   const parsed = tokenInfo.value.data.parsed;
-  if (parsed.info.mint !== TOKEN_MINT.toBase58()) {
+  if (parsed.info.mint !== getTokenMint(connection).toBase58()) {
     throw new Error('Invalid mint');
   }
   if (parsed.info.owner !== LOCK_OWNER.toBase58()) {
@@ -77,7 +74,7 @@ const lock = async () => {
 
   const instruction = await create(
     connection,
-    program,
+    getProgramId(connection),
     // @ts-ignore
     Buffer.from(seed),
     wallet.publicKey,
@@ -95,7 +92,7 @@ const initUnlock = async () => {
 
   const instruction = await initializeUnlock(
     connection,
-    VESTING_PROGRAM_ID,
+    getProgramId(connection),
     // @ts-ignore
     Buffer.from(LOCK_SEED),
   );
@@ -110,7 +107,7 @@ const withdraw = async () => {
 
   const instruction = await unlock(
     connection,
-    program,
+    getProgramId(connection),
     // @ts-ignore
     Buffer.from(LOCK_SEED),
   );
